@@ -51,7 +51,7 @@ A flow represents a workflow as a graph that:
 
 A sequence of structured information flows between nodes over directed edges. A task may choose how to interpret such information from all incoming edges.
 
-Information flowing between tasks can be limited to structured information that can be represented in a JSON [1] data format. The sequences can then be represented in a JSON-seq [2] format.
+Information flowing between tasks is limited to tree-structured information that typically be represented in a JSON [1] or YAML [2] data format.
 
 A task:
 
@@ -79,7 +79,7 @@ The graph is constructed with a single arrow operator (i.e., '→' U+2192 or '->
 
 A task is identified by name which are alpha-numeric along with the hyphen ('-') and underscore ('_') (e.g., `my-task`).
 
-A task may have parameters indicated by keyword/value pairs within parenthesis (e.g. `range(start=1,end=10)`).
+A task typically acts on inputs from within the pipeline.may have parameters, typ indicated by keyword/value pairs within parenthesis (e.g. `range(start=1,end=10)`).
 
 A flow statement is a sequence of arrow operations:
 
@@ -109,7 +109,7 @@ is the same as (which is also an error):
 A :out → B :out → C
 ```
 
-TTo send the output of A to both B and C, you must terminate the first flow statement:
+To send the output of A to both B and C, you must terminate the first flow statement:
 
 ```
 A :out → B;
@@ -152,7 +152,7 @@ And the end of a flow statement, a label identifies the output:
 A → B → C → :after
 ```
 
-To faciltate meets and joins without labels, the vertical bar ('|') operator allows to list multiple tasks.
+To facilitate meets and joins without labels, the vertical bar ('|') operator allows to list multiple tasks.
 
 For example, a simple "fan in" or "meet" can be represented as:
 
@@ -209,6 +209,9 @@ A resource by a URI reference in angle brackets:
 
 A resource is effectively an implicit task that loads the resource produces the content as its output. The URI is relative to the effective base URI of the workflow
 
+Within a dataset, a resource may be in JSON or YAML syntax natively. An implementation is free to
+provide other syntax transformers.
+
 A resource can also be a following task which commits the input to the resource:
 
 ```
@@ -218,7 +221,7 @@ load → score → <http://example.com/myservice/api/v1/store>
 A resource may be parameterized to enable options like HTTP method, etc.:
 
 ```
-load → score → <http://example.com/myscores.json>(method='PUT')
+load → score → <http://example.com/myscores.json>{{method: PUT}}
 ```
 
 An implementation may provide out-of-band configuration options for accessing resources that require specific credentials.
@@ -236,7 +239,7 @@ Sometimes tasks output sequences of objects and the following tasks are intended
 
 By default, the input to a task is the whole sequence. To iterate over a the sequence, invoking the follow task for each item in the sequence, we use the multiple operator '*'.
 
-For example, assume that `sequence.json` contains:
+For example, assume that `sequence.json` contains data in JSON-SEQ format (`application/json-seq`):
 
 ```JSON
 {"x":12,"y":24}
@@ -251,13 +254,13 @@ The follow flow will invoke the task A for each object in the sequence:
 <seqeuence.json> → * A
 ```
 
-Similary, a flow may require iteration or spreading outputs to a whole "sub-workflow". To facilitate brevity, a subflow can be contained in brackets:
+Similarly, a flow may require iteration or spreading outputs to a whole "sub-workflow". To facilitate brevity, a subflow can be contained in brackets:
 
 ```
-A → {
+A → [
   B → C
   D  
-} → E
+] → E
 ```
 
 which is equivalent to:
@@ -270,10 +273,10 @@ A :out → B → C → :in E ;
 Iteration is also available for subflows:
 
 ```
-A → * {
+A → * [
   B → C
   D  
-} → E
+] → E
 ```
 
 There is no equivalent of a subflow with iteration.
@@ -365,6 +368,33 @@ In short, inputs are merged into a single sequence of structured objects with du
 
 The left-most tasks (i.e., :start) are sent a singleton empty object. The outputs of all the right-most tasks are aggregated using the rules above. Where the output of the overall workflow is
 
+## Parameter literals
+
+A task may be explicitly parameterized within the workflow:
+
+```
+A {{ delete: true }} → B {{"flush":true}}
+```
+
+The syntax of YAML versus JSON can be inferred but an explicit format can be
+prefixed:
+
+```
+A `YAML`{{ delete: true }}
+```
+
+The keywords `YAML` and `JSON` are reserved by any media type may be used (e.g., `application/json`):
+
+```
+A `application/json`{{ "delete": true }}
+```
+
+Flows may also start with a parameter literal:
+
+```
+{{ customer: C123 }} → A → B
+```
+
 ## Reserved words
 
 A task may not have the following names:
@@ -374,4 +404,6 @@ A task may not have the following names:
  * else
  * elif
 
-A label may have any name with the exception that `:start` and `:end` have special semantics. When used, they must be the left-most or right-most "tasks".
+## Reserved labels
+
+A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the workflow) and `:end` must be the right-most task (the end of the workflow).
