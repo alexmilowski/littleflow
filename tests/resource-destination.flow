@@ -1,0 +1,2 @@
+load → score → <http://example.com/myservice/api/v1/store>;
+load → score → <http://example.com/myservice/api/v1/store>{{method:PUT}};

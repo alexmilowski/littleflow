@@ -1,0 +1,7 @@
+{{ start: true }} →
+A{{}} →
+B {{}} →
+C {{ yaml: true }} →
+D {{ "json": true }} →
+E {{ }: true }} →
+F `JSON`{{ "json": true }}
