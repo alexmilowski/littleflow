@@ -2,6 +2,9 @@
 A{{}} →
 B {{}} →
 C {{ yaml: true }} →
-D {{ "json": true }} →
-E {{ }: true }} →
-F `JSON`{{ "json": true }}
+D {{ "not json": true }} →
+E {{ +: true }} →
+F `JSON`{{ "json": true }} →
+G `application/json`{{ "json": true }} →
+H `YAML`{{ yaml: true }} →
+I `application/yaml`{{ yaml: true }}
