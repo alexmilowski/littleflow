@@ -2,7 +2,7 @@ from .model import Workflow, SubFlow, Task, LiteralSource
 from .flow import Flow
 
 
-class FlowCompiler:
+class Compiler:
 
    def __init__(self):
       pass

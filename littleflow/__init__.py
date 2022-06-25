@@ -1,4 +1,4 @@
-from .parser import FlowParser
+from .parser import Parser
 from .model import Workflow, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral
-from .compiler import FlowCompiler
+from .compiler import Compiler
 from .runner import Context, Runner

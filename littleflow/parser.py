@@ -45,7 +45,7 @@ def iter_tree(top):
       for subtree in subtrees:
          context.append((True,subtree,[child for child in subtree.children if isinstance(child,Tree)]))
 
-class FlowParser:
+class Parser:
 
    def __init__(self):
       self._parser = Lark(grammar,parser='lalr',start='flow',propagate_positions=True)
