@@ -1,4 +1,4 @@
-from .model import Workflow, SubFlow, Task, LiteralSource
+from .model import Workflow, SubFlow, Task, LiteralSource, Start
 from .flow import Flow
 
 
@@ -15,9 +15,11 @@ class Compiler:
       for index, step in enumerate(model.indexed):
          flow[index] = step
 
-      for subflow in model.flows:
+      flows = [(0,model.flows[0])]
+      while len(flows)>0:
+         prior, subflow = flows.pop()
          for statement in subflow.statements:
-            current = subflow.index
+            current = prior
             if statement.source is not None:
                named = subflow.named_outputs.get(statement.source)
                if named is None:
@@ -25,11 +27,15 @@ class Compiler:
                current = named.index
 
             for step in statement.steps:
-               if not isinstance(step,Task) and not isinstance(step,LiteralSource) and not isinstance(step,SubFlow):
+               if not isinstance(step,Task) and not isinstance(step,LiteralSource) and not isinstance(step,SubFlow) and not isinstance(step,Start):
                   raise NotImplementedError(f'Support for {step.__class__.__name__} not implemented')
                assert flow.F[current,step.index]==0, f'Transition from {current}->{step.index} already exists.'
                flow.F[current,step.index] = 1
-               current = step.index
+               if isinstance(step,SubFlow):
+                  flows.append((step.index,step))
+                  current = step.named_inputs.get('end').index
+               else:
+                  current = step.index
 
             if statement.destination is not None:
                named = subflow.named_inputs.get(statement.destination)

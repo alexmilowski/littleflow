@@ -5,7 +5,9 @@ class Context:
    def __init__(self,flow,state=None,activation=None):
       self._flow = flow
       self._A = activation if activation is not None else np.zeros((self.F.shape[0],1),dtype=int)
-      self._a = np.ones((self.F.shape[0],1),dtype=int)
+      self._a = flow.F.sum(axis=0)
+      self._a[0] = 1
+      self._a = self._a.reshape((self.F.shape[0],1))
       self._initial = np.zeros((self.F.shape[0],1),dtype=int)
       self._initial[0] = 1
       self._S = state if state is not None else np.zeros((self.F.shape[0],1),dtype=int)

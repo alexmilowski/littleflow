@@ -33,7 +33,7 @@ class LogContext(Context):
 
    def start(self,tasks):
       self._E = 1*tasks
-      print(self._E.flatten())
+      print(str(self._A.flatten()),str(self._E.flatten()))
 
    @property
    def E(self):

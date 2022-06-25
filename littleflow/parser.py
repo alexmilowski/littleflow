@@ -91,10 +91,10 @@ class Parser:
       for at_start, item in iter_tree(ast):
          if not at_start:
             if item.data=='subflow':
-               sub = SubFlow(start.index)
                index += 1
                end.index = index
                workflow.indexed.append(end)
+               subject = flow
 
                flow, statement = ancestors.pop()
                end = flow.named_inputs['end']
@@ -119,8 +119,13 @@ class Parser:
             flow = SubFlow(index)
             workflow.flows.append(flow)
             start = Start(index)
+            if iterate:
+               step = Iterate(flow)
+               step.index = step.step.index
+               realize_step(step)
+            else:
+               realize_step(flow)
             flow.named_outputs['start'] = start
-            workflow.indexed.append(start)
             end = End(-1)
             flow.named_inputs['end'] = end
             flow.named_inputs['start'] = start
