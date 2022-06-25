@@ -1,6 +1,42 @@
-from .model import Workflow, SubFlow, Task, LiteralSource, Start
-from .flow import Flow
+import json
 
+import yaml
+
+from .model import Workflow, SubFlow, Task, LiteralSource, Start, End
+from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow
+
+def compile_literal(text,media_type=None):
+   text = text.strip()
+   if len(text)==0:
+      return {}
+   value = None
+   if media_type is None:
+      errors = {}
+      try:
+         value = yaml.load(text,Loader=yaml.Loader)
+      except yaml.YAMLError as ex:
+         errors['yaml'] = ex
+      if value is None:
+         try:
+            value = json.loads('{' + text + '}')
+         except json.JSONDecodeError as ex:
+            errors['json'] = ex
+      if len(errors)>0:
+         raise ValueError(f'Guesing at type failed - cannot parse literal: as YAML - {errors["yaml"]}; as JSON - {errors["json"]}')
+   elif media_type=='JSON' or media_type=='application/json':
+      try:
+         value = json.loads('{' + text + '}')
+      except json.JSONDecodeError as ex:
+         raise ValueError(f'Cannot parse JSON literal: {ex}')
+   elif media_type=='YAML' or media_type=='application/yaml':
+      try:
+         value = yaml.load(text,Loader=yaml.Loader)
+      except yaml.YAMLError as ex:
+         raise ValueError(f'Cannot parse YAML literal: {ex}')
+   else:
+      raise ValueError(f'Unrecognized literal type {media_type}')
+
+   return value
 
 class Compiler:
 
@@ -13,7 +49,28 @@ class Compiler:
       flow = Flow(size)
 
       for index, step in enumerate(model.indexed):
-         flow[index] = step
+         if isinstance(step,Task):
+            value = {}
+            if step.parameters is not None:
+               try:
+                  value = compile_literal(step.parameters.value,step.parameters.media_type)
+               except ValueError as ex:
+                  raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
+            flow[index] = InvokeTask(step.name,value)
+         elif isinstance(step,LiteralSource):
+            try:
+               value = compile_literal(step.parameters.value,step.parameters.media_type)
+               flow[index] = Source(value)
+            except ValueError as ex:
+               raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
+         elif isinstance(step,SubFlow):
+            flow[index] = InvokeFlow()
+         elif isinstance(step,Start):
+            flow[index] = Source({})
+         elif isinstance(step,End):
+            flow[index] = Sink()
+         else:
+            raise NotImplementedError(f'Support for {step.__class__.__name__} not implemented')
 
       flows = [(0,model.flows[0])]
       while len(flows)>0:
@@ -27,8 +84,6 @@ class Compiler:
                current = named.index
 
             for step in statement.steps:
-               if not isinstance(step,Task) and not isinstance(step,LiteralSource) and not isinstance(step,SubFlow) and not isinstance(step,Start):
-                  raise NotImplementedError(f'Support for {step.__class__.__name__} not implemented')
                assert flow.F[current,step.index]==0, f'Transition from {current}->{step.index} already exists.'
                flow.F[current,step.index] = 1
                if isinstance(step,SubFlow):
