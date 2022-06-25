@@ -43,8 +43,9 @@ class LogContext(Context):
       return self._E
 
 @cli.command()
+@click.option('--limit',type=int,default=-1,help='Iteration limit')
 @click.argument('workflow')
-def run(workflow):
+def run(limit,workflow):
    p = Parser()
    c = Compiler()
    try:
@@ -57,9 +58,10 @@ def run(workflow):
    context = LogContext(flow)
    runner = Runner()
 
+   count = 0
    context.start(context.initial)
-   while runner.next(context,context.E):
-      pass
+   while (limit<0 or count<limit) and runner.next(context,context.E):
+      count += 1
 
 
 if __name__=='__main__':
