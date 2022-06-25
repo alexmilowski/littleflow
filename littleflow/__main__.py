@@ -3,11 +3,15 @@ import os
 
 import click
 
-from littleflow import Parser, Compiler, Context, Runner, CachingFlowContext
+from littleflow import __version__, Parser, Compiler, Context, Runner, CachingFlowContext
 
 @click.group()
 def cli():
    pass
+
+@cli.command()
+def version():
+   print('.'.join(map(str,__version__)))
 
 @cli.command()
 @click.argument('files',nargs=-1)
