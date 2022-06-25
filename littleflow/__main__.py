@@ -31,15 +31,16 @@ class LogContext(Context):
       super().__init__(flow)
       self._E = None
 
+   def end(self,tasks):
+      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.a.flatten()))
+
    def start(self,tasks):
       self._E = 1*tasks
-      print(str(self._A.flatten()),str(self._E.flatten()))
+      print('S',str(self.S.flatten()),str(self.A.flatten()),str(self._E.flatten()),str(self.a.flatten()))
 
    @property
    def E(self):
       return self._E
-
-
 
 @cli.command()
 @click.argument('workflow')
@@ -56,9 +57,9 @@ def run(workflow):
    context = LogContext(flow)
    runner = Runner()
 
-   current = context.initial
-   while runner.next(context,current):
-      current = context.E
+   context.start(context.initial)
+   while runner.next(context,context.E):
+      pass
 
 
 if __name__=='__main__':
