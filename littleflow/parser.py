@@ -1,6 +1,6 @@
 from lark import Lark, Token, Tree
 
-from .model import Flow, Statement, Start, End, Iterate, Task, Subflow, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral
+from .model import Workflow, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral
 
 grammar = r"""
 flow: flow_statement+
@@ -57,7 +57,9 @@ class FlowParser:
 
       from_start = []
 
-      workflow = None
+      workflow = Workflow()
+
+      flow = None
       statement = None
       iterate = False
       subject = None
@@ -65,55 +67,69 @@ class FlowParser:
       media_tyope = None
       input_label = None
       output_label = None
+      ancestors = []
 
       def realize_step(step):
-         statement.steps.append(step)
+         if statement is not None:
+            statement.steps.append(step)
          workflow.indexed.append(step)
          if input_label is not None:
             label = input_label.value[1:]
-            if label in workflow.named_inputs:
+            if label in ['start','end']:
+               raise ValueError(f'{input_label.line}:{input_label.column} {label} is a reserved label')
+            if label in flow.named_inputs:
                raise ValueError(f'{input_label.line}:{input_label.column} input label {label} already exists')
-            workflow.named_inputs[label] = step
+            flow.named_inputs[label] = step
          if output_label is not None:
             label = output_label.value[1:]
-            if label in workflow.named_outputs:
+            if label in ['start','end']:
+               raise ValueError(f'{output_label.line}:{output_label.column} {label} is a reserved label')
+            if label in flow.named_outputs:
                raise ValueError(f'{output_label.line}:{output_label.column} output label {label} already exists')
-            workflow.named_outputs[label] = step
+            flow.named_outputs[label] = step
 
-      ancestors = []
-      for start,item in iter_tree(ast):
-         if not start:
+      for at_start, item in iter_tree(ast):
+         if not at_start:
             if item.data=='subflow':
-               sub = workflow
-               workflow, index, statement = ancestors.pop()
-               end = workflow.named_inputs['end']
+               sub = SubFlow(start.index)
                index += 1
-               realize_step(Subflow(index,sub))
+               end.index = index
+               workflow.indexed.append(end)
+
+               flow, statement = ancestors.pop()
+               end = flow.named_inputs['end']
+               start = flow.named_outputs['start']
             continue
 
          if item.data=='flow':
             index = 0
-            workflow = Flow()
-            start = Start()
-            workflow.named_inputs['start'] = start
+            flow = SubFlow(index)
+            workflow.flows.append(flow)
+            start = Start(index)
             workflow.indexed.append(start)
+
+            flow.named_outputs['start'] = start
+
             end = End(-1)
-            workflow.named_inputs['end'] = end
+            flow.named_inputs['end'] = end
+            flow.named_inputs['start'] = start
          elif item.data=='subflow':
-            ancestors.append((workflow,index,statement))
-            index = 0
-            workflow = Flow()
-            start = Start()
-            workflow.named_inputs['start'] = start
+            ancestors.append((flow,statement))
+            index += 1
+            flow = SubFlow(index)
+            workflow.flows.append(flow)
+            start = Start(index)
+            flow.named_outputs['start'] = start
             workflow.indexed.append(start)
             end = End(-1)
-            workflow.named_inputs['end'] = end
+            flow.named_inputs['end'] = end
+            flow.named_inputs['start'] = start
          elif item.data=='flow_statement':
             iterate = False
             step = None
             source = None
             statement = Statement()
-            workflow.statements.append(statement)
+            flow.statements.append(statement)
          elif item.data=='step':
             subject = None
 
@@ -181,6 +197,9 @@ class FlowParser:
             step = Task(index,item.children[0].value)
             step.line = item.children[0].line
             step.column = item.children[0].column
+            if iterate:
+               step = Iterate(step)
+               step.index = step.step.index
             realize_step(step)
             subject = step
          elif item.data=='destination':

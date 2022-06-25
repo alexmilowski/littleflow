@@ -30,6 +30,7 @@ class End(Step):
 @dataclass
 class Iterate(Step):
    step : Step = None
+   index : int = -1
 
 @dataclass
 class LiteralSource(Step):
@@ -63,13 +64,13 @@ class Statement:
    steps : list[Step] = field(default_factory=list)
 
 @dataclass
-class Flow:
+class SubFlow(Step):
+   index : int
    named_inputs : dict = field(default_factory=dict)
    named_outputs : dict = field(default_factory=dict)
    statements : list[Statement] = field(default_factory=list)
-   indexed : list[Step] = field(default_factory=list)
 
 @dataclass
-class Subflow(Step):
-   index : int
-   flow : Flow
+class Workflow:
+   indexed : list[Step] = field(default_factory=list)
+   flows : list[SubFlow] = field(default_factory=list)
