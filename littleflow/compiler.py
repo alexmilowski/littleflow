@@ -56,19 +56,19 @@ class Compiler:
                   value = compile_literal(step.parameters.value,step.parameters.media_type)
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
-            flow[index] = InvokeTask(step.name,value)
+            flow[index] = InvokeTask(index,step.name,value)
          elif isinstance(step,LiteralSource):
             try:
                value = compile_literal(step.parameters.value,step.parameters.media_type)
-               flow[index] = Source(value)
+               flow[index] = Source(index,value)
             except ValueError as ex:
                raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
          elif isinstance(step,SubFlow):
-            flow[index] = InvokeFlow()
+            flow[index] = InvokeFlow(index)
          elif isinstance(step,Start):
-            flow[index] = Source({})
+            flow[index] = Source(index,{})
          elif isinstance(step,End):
-            flow[index] = Sink()
+            flow[index] = Sink(index)
          else:
             raise NotImplementedError(f'Support for {step.__class__.__name__} not implemented')
 

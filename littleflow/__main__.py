@@ -3,7 +3,7 @@ import os
 
 import click
 
-from littleflow import Parser, Compiler, Context, Runner
+from littleflow import Parser, Compiler, Context, Runner, CachingFlowContext
 
 @click.group()
 def cli():
@@ -29,23 +29,57 @@ class LogContext(Context):
 
    def __init__(self,flow):
       super().__init__(flow)
-      self._E = None
 
    def end(self,tasks):
+      super().end(tasks)
       print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.a.flatten()))
 
    def start(self,tasks):
-      self._E = 1*tasks
-      print('S',str(self.S.flatten()),str(self.A.flatten()),str(self._E.flatten()),str(self.a.flatten()))
+      super().start(tasks)
+      E = 1*tasks
+      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.a.flatten()))
 
-   @property
-   def E(self):
-      return self._E
+class LogFlowContext(CachingFlowContext):
+
+   def __init__(self,flow,state=None,activation=None,show_cache=False):
+      super().__init__(flow,state=state,activation=activation)
+      self.show_cache = show_cache
+
+   def input_for(self,index):
+      if self.show_cache:
+         print(self.cache)
+      return super().input_for(index)
+
+   def output(self,value):
+      print(f'output → {value}')
+
+   def output_for(self,index,value):
+      print(f'{index} → {value}')
+      super().output_for(index,value)
+   def append_input_for(self,source,target,value):
+      print(f'{source} → {target}')
+      super().append_input_for(source,target,value)
+
+   def end(self,tasks):
+      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.a.flatten()))
+      super().end(tasks)
+
+   def start(self,tasks):
+      E = 1*tasks
+      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.a.flatten()))
+      super().start(tasks)
+
+   def start_task(self,invocation,input):
+      print(f'{input} → {invocation.index} ({invocation.name})')
+      self.output_for(invocation.index,input)
+      super().start_task(invocation,input)
 
 @cli.command()
 @click.option('--limit',type=int,default=-1,help='Iteration limit')
+@click.option('--flow-context',is_flag=True)
+@click.option('--show-cache',is_flag=True)
 @click.argument('workflow')
-def run(limit,workflow):
+def run(limit,flow_context,show_cache,workflow):
    p = Parser()
    c = Compiler()
    try:
@@ -55,13 +89,13 @@ def run(limit,workflow):
    except FileNotFoundError as ex:
       print(f'Cannot open {file}',file=sys.stderr)
 
-   context = LogContext(flow)
    runner = Runner()
-
-   count = 0
+   context = LogFlowContext(flow,show_cache=show_cache) if flow_context else LogContext(flow)
    context.start(context.initial)
-   while (limit<0 or count<limit) and runner.next(context,context.E):
+   count = 0
+   while (limit<0 or count<limit) and not context.ending.empty():
       count += 1
+      runner.next(context,context.ending.get())
 
 
 if __name__=='__main__':

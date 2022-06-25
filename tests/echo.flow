@@ -1,0 +1,5 @@
+{{
+color: orange
+fruit: orange
+}} → A :out → B;
+:out → C

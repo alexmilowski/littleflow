@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Invocation:
-   pass
+   index : int
 
 @dataclass
 class Source(Invocation):
