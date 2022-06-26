@@ -1,0 +1,22 @@
+<> → A;
+<- start: true -> → A;
+<-
+multiline: true
+start: true
+count: 10
+-> → A;
+<-
+- index: 0
+- index: 1
+-> → A;
+<{ "start": true }> → A;
+<{
+"multiline" : true,
+"start": true,
+"count": 10
+}> → A;
+<[ { "index" : 0}, { "index" : 1} ]> → A;
+<[
+{ "index" : 0},
+{ "index" : 1}
+]> → A;
