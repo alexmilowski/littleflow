@@ -9,7 +9,7 @@ class LiteralType(Enum):
 
 @dataclass
 class ParameterLiteral:
-   value : 'typing.Any'
+   value : str
    type : LiteralType = LiteralType.EMPTY
    line : int = 0
    column : int = 0
@@ -42,7 +42,10 @@ class Iterate(Step):
 @dataclass
 class LiteralSource(Step):
    index : int
-   parameters: ParameterLiteral
+   value : str
+   type : LiteralType = LiteralType.EMPTY
+   line : int = 0
+   column : int = 0
 
 @dataclass
 class ResourceSource(Step):

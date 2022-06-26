@@ -10,7 +10,7 @@ task_list : task (OR task)*
 task: NAME parameter_literal?
 subflow: "[" flow_statement+ "]"
 conditional: "if" EXPR "then" step ("elif" EXPR "then" step)* ("else" step)?
-source: LABEL | resource | parameter_literal
+source: LABEL | resource | resource_literal
 destination: LABEL | resource
 resource: URI parameter_literal?
 parameter_literal: empty_parameter | json_object_parameter | json_array_parameter | yaml_parameter
@@ -18,6 +18,11 @@ empty_parameter: "(" ")"
 json_object_parameter: "({" JSON_OBJECT_PARAMETER_BODY? "})"
 json_array_parameter: "([" JSON_ARRAY_PARAMETER_BODY? "])"
 yaml_parameter: "(-" YAML_PARAMETER_BODY? "-)"
+resource_literal : empty_resource | json_object_resource | json_array_resource | yaml_resource
+empty_resource: "<" ">"
+json_object_resource: "<{" JSON_OBJECT_RESOURCE_BODY? "}>"
+json_array_resource: "<[" JSON_ARRAY_RESOURCE_BODY? "]>"
+yaml_resource: "<-" YAML_RESOURCE_BODY? "->"
 ARROW: "→" | "->"
 STAR: "*"
 OR: "|"
@@ -26,10 +31,13 @@ NAME: /[a-zA-Z_]\w*/
 DEC_NUMBER: /0|[1-9][\d_]*/i
 EXPR: /`[^`]*`/
 STRING: /("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
-URI: /<[^>]*>/
+URI: /<[^>\-{[][^>]*>/
 JSON_OBJECT_PARAMETER_BODY: /([^}]+|(}[^)]))+/
 JSON_ARRAY_PARAMETER_BODY: /([^]]+|(][^)]))+/
 YAML_PARAMETER_BODY: /([^-]+|(-[^)]))+/
+JSON_OBJECT_RESOURCE_BODY: /([^}]+|(}[^>]))+/
+JSON_ARRAY_RESOURCE_BODY: /([^]]+|(][^>]))+/
+YAML_RESOURCE_BODY: /([^-]+|(-[^>]))+/
 %import common.WS
 %ignore WS
 """
@@ -167,17 +175,32 @@ class Parser:
          elif item.data=='source':
             if isinstance(item.children[0],Token) and item.children[0].type=='LABEL':
                statement.source = item.children[0].value[1:]
-            elif isinstance(item.children[0],Tree) and item.children[0].data.value=='parameter_literal':
-               index += 1
-               subject = LiteralSource(index,None)
-               realize_step(subject)
-            elif isinstance(item.children[0],Tree) and item.children[0].data.value=='resource':
-               index += 1
-               subject = ResourceSource(index)
-               realize_step(subject)
-            else:
-               print(item)
-               assert False, 'Unknown context for source'
+         elif item.data=='resource':
+            index += 1
+            subject = ResourceSource(index,item.children[0].value[1:-1])
+            realize_step(subject)
+         elif item.data=='resource_literal':
+            index += 1
+            literal = LiteralSource(index,None)
+            realize_step(literal)
+         elif item.data=='empty_resource':
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='yaml_resource':
+            literal.value = item.children[0].value if len(item.children)>0 else ''
+            literal.type = LiteralType.YAML
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='json_object_resource':
+            literal.value = item.children[0].value if len(item.children)>0 else ''
+            literal.type = LiteralType.JSON_OBJECT
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='json_array_resource':
+            literal.value = item.children[0].value if len(item.children)>0 else ''
+            literal.type = LiteralType.JSON_ARRAY
+            literal.line = item.data.line
+            literal.column = item.data.column
          elif item.data=='parameter_literal':
             literal = None
          elif item.data=='empty_parameter':
@@ -196,8 +219,6 @@ class Parser:
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_ARRAY)
             literal.line = item.data.line
             literal.column = item.data.column
-         elif item.data=='resource':
-            subject.uri = item.children[0].value[1:-1]
          elif item.data=='task_list':
             assert len(item.children)==1, 'meet shorthand not supported'
          elif item.data=='task':

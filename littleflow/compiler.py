@@ -59,10 +59,10 @@ class Compiler:
             flow[index] = InvokeTask(index,step.name,value)
          elif isinstance(step,LiteralSource):
             try:
-               value = compile_literal(step.parameters.value,step.parameters.media_type)
+               value = compile_literal(step.value,step.type)
                flow[index] = Source(index,value)
             except ValueError as ex:
-               raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
+               raise ValueError(f'{step.line}:{step.column} {ex}')
          elif isinstance(step,SubFlow):
             flow[index] = InvokeFlow(index)
          elif isinstance(step,Start):
