@@ -221,7 +221,7 @@ load → score → <http://example.com/myservice/api/v1/store>
 A resource may be parameterized to enable options like HTTP method, etc.:
 
 ```
-load → score → <http://example.com/myscores.json>{{method: PUT}}
+load → score → <http://example.com/myscores.json>(- method: PUT -)
 ```
 
 An implementation may provide out-of-band configuration options for accessing resources that require specific credentials.
@@ -254,13 +254,13 @@ The follow flow will invoke the task A for each object in the sequence:
 <seqeuence.json> → * A
 ```
 
-Similarly, a flow may require iteration or spreading outputs to a whole "sub-workflow". To facilitate brevity, a subflow can be contained in brackets:
+Similarly, a flow may require iteration or spreading outputs to a whole "sub-workflow". To facilitate brevity, a subflow can be contained in curly brackets:
 
 ```
-A → [
+A → {
   B → C
   D  
-] → E
+} → E
 ```
 
 which is equivalent to:
@@ -273,13 +273,18 @@ A :out → B → C → :in E ;
 Iteration is also available for subflows:
 
 ```
-A → * [
+A → * {
   B → C
   D  
-] → E
+} → E
 ```
 
-There is no equivalent of a subflow with iteration.
+which is equivalent to:
+
+```
+A :out → * B → * C → :in E ;
+:out → * D → :in
+```
 
 ## Stitching the graph
 
@@ -373,27 +378,28 @@ The left-most tasks (i.e., :start) are sent a singleton empty object. The output
 A task may be explicitly parameterized within the workflow:
 
 ```
-A {{ delete: true }} → B {{"flush":true}}
+A (- delete: true -) → B ({"flush":true})
 ```
 
-The syntax of YAML versus JSON can be inferred but an explicit format can be
-prefixed:
+For parameter literals:
+
+ * a YAML literal is contained within `(-` and `-)` delimiters
+ * a JSON object is contained within `({` and `})` delimiters
+ * a JSON array is contained within `([` and `])` delimiters
+
+## Resource literals
+
+Flows may also start with a literal:
 
 ```
-A `YAML`{{ delete: true }}
+<- customer: C123 -> → A → B
 ```
 
-The keywords `YAML` and `JSON` are reserved by any media type may be used (e.g., `application/json`):
+For parameter literals:
 
-```
-A `application/json`{{ "delete": true }}
-```
-
-Flows may also start with a parameter literal:
-
-```
-{{ customer: C123 }} → A → B
-```
+ * a YAML literal is contained within `<-` and `->` delimiters
+ * a JSON object is contained within `<{` and `}>` delimiters
+ * a JSON array is contained within `<[` and `]>` delimiters
 
 ## Reserved words
 

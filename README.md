@@ -7,13 +7,13 @@ A flow language
 This simple example can compile and run a workflow:
 
 ```python
-from littleflow import Parser, Compiler, Context, Runner
+from littleflow import Parser, Compiler, FlowContext, Runner
 
 workflow = """
-A → [
+A → {
   B → C
   D
-] → E
+} → E
 """
 
 p = Parser()
@@ -36,17 +36,16 @@ class NonExecutingContext(Context):
       return self._E
 
 
-context = NonExecutingContext(flow)
+context = FlowContext(flow)
 runner = Runner()
 
 context.start(context.initial)
-while runner.next(context,context.E):
-   pass
-
+while not context.ending.empty():
+   runner.next(context,context.ending.get())
 ```
 
 Typically, a real usage would implement both the `start()` and `end()` methods
-on `Context` that will start tasks and notify when these tasks end. At the end,
+on `FlowContext` that will start tasks and notify when these tasks end. Also, theAt the end,
 the loop for execution would likely be asynchronous based on end task event
 notification.
 
