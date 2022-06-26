@@ -8,7 +8,7 @@ flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
 step: LABEL? STAR? (task_list | subflow | conditional) LABEL?
 task_list : task (OR task)*
 task: NAME parameter_literal?
-subflow: "[" flow_statement+ "]"
+subflow: "{" flow_statement+ "}"
 conditional: "if" EXPR "then" step ("elif" EXPR "then" step)* ("else" step)?
 source: LABEL | resource | resource_literal
 destination: LABEL | resource
