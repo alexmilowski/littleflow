@@ -1,5 +1,5 @@
-{{
+<-
 color: orange
 fruit: orange
-}} → A :out → B;
+-> → A :out → B;
 :out → C

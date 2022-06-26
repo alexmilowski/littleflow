@@ -1,0 +1,6 @@
+<doc.json> → A;
+<doc.yaml> → A;
+<doc.yaml>(--- content-type: application/yaml ---)  → A;
+<doc.yaml>(--- content-type: text/plain+yaml ---) → A;
+<doc.json>(--- content-type: application/json ---) → A;
+<doc.json>(--- content-type: text/plain+json ---) → A;

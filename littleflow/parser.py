@@ -1,6 +1,6 @@
 from lark import Lark, Token, Tree
 
-from .model import Workflow, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral
+from .model import Workflow, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
 
 grammar = r"""
 flow: flow_statement+
@@ -13,8 +13,11 @@ conditional: "if" EXPR "then" step ("elif" EXPR "then" step)* ("else" step)?
 source: LABEL | resource | parameter_literal
 destination: LABEL | resource
 resource: URI parameter_literal?
-parameter_literal: media_type_literal? "{{" PARAMETER_BODY? "}}"
-media_type_literal: EXPR
+parameter_literal: empty_parameter | json_object_parameter | json_array_parameter | yaml_parameter
+empty_parameter: "(" ")"
+json_object_parameter: "({" JSON_OBJECT_PARAMETER_BODY? "})"
+json_array_parameter: "([" JSON_ARRAY_PARAMETER_BODY? "])"
+yaml_parameter: "(-" YAML_PARAMETER_BODY? "-)"
 ARROW: "→" | "->"
 STAR: "*"
 OR: "|"
@@ -24,7 +27,9 @@ DEC_NUMBER: /0|[1-9][\d_]*/i
 EXPR: /`[^`]*`/
 STRING: /("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 URI: /<[^>]*>/
-PARAMETER_BODY: /([^}]+|(}[^}]))+/
+JSON_OBJECT_PARAMETER_BODY: /([^}]+|(}[^)]))+/
+JSON_ARRAY_PARAMETER_BODY: /([^]]+|(][^)]))+/
+YAML_PARAMETER_BODY: /([^-]+|(-[^)]))+/
 %import common.WS
 %ignore WS
 """
@@ -99,6 +104,13 @@ class Parser:
                flow, statement = ancestors.pop()
                end = flow.named_inputs['end']
                start = flow.named_outputs['start']
+            elif item.data=='parameter_literal':
+               if subject is not None:
+                  subject.parameters = literal
+               else:
+                  print(item)
+                  assert False, f'{line}:{column} Unknown context for parameter literal'
+
             continue
 
          if item.data=='flow':
@@ -167,32 +179,23 @@ class Parser:
                print(item)
                assert False, 'Unknown context for source'
          elif item.data=='parameter_literal':
-            media_type = None
-            value = ''
-            line = 0
-            column = 0
-            for child in item.children:
-               if isinstance(child,Token) and child.type=='PARAMETER_BODY':
-                  value = child.value
-                  line = child.line
-                  column = child.column
-            literal = ParameterLiteral(value)
-            literal.line = line
-            literal.column = column
-            if subject is not None:
-               subject.parameters = literal
-            else:
-               print(item)
-               assert False, f'{line}:{column} Unknown context for parameter literal'
-
-         elif item.data=='media_type_literal':
-            media_type = item.children[0].value[1:-1]
-            if isinstance(subject,ParameterLiteral):
-               subject.media_type = media_type
-            elif isinstance(subject,LiteralSource) or isinstance(subject,Task):
-               subject.parameters.media_type = media_type
-            else:
-               assert False, 'Unknown subject for media_type_literal'
+            literal = None
+         elif item.data=='empty_parameter':
+            literal = ParameterLiteral(None)
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='yaml_parameter':
+            literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.YAML)
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='json_object_parameter':
+            literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_OBJECT)
+            literal.line = item.data.line
+            literal.column = item.data.column
+         elif item.data=='json_array_parameter':
+            literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_ARRAY)
+            literal.line = item.data.line
+            literal.column = item.data.column
          elif item.data=='resource':
             subject.uri = item.children[0].value[1:-1]
          elif item.data=='task_list':
@@ -215,11 +218,8 @@ class Parser:
                subject = ResourceSink(index)
                realize_step(subject)
          else:
-            line = 0
-            column = 0
-            if isinstance(item.children[0],Token):
-               line = item.children[0].line
-               column = item.children[0].column
+            line = item.data.line
+            column = item.data.column
             print(item.data)
             print(item)
             assert False, f'{line}:{column} Cannot handle item: {item.data}'

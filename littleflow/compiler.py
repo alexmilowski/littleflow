@@ -2,41 +2,41 @@ import json
 
 import yaml
 
-from .model import Workflow, SubFlow, Task, LiteralSource, Start, End
+from .model import Workflow, SubFlow, Task, LiteralSource, Start, End, LiteralType
 from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow
 
-def compile_literal(text,media_type=None):
-   text = text.strip()
-   if len(text)==0:
+def compile_literal(text,type=LiteralType.EMPTY):
+   if type==LiteralType.EMPTY:
       return {}
-   value = None
-   if media_type is None:
-      errors = {}
+
+   text = text.strip()
+
+   if type==LiteralType.YAML:
+      if len(text)==0:
+         return {}
       try:
          value = yaml.load(text,Loader=yaml.Loader)
-      except yaml.YAMLError as ex:
-         errors['yaml'] = ex
-      if value is None:
-         try:
-            value = json.loads('{' + text + '}')
-         except json.JSONDecodeError as ex:
-            errors['json'] = ex
-      if len(errors)>0:
-         raise ValueError(f'Guesing at type failed - cannot parse literal: as YAML - {errors["yaml"]}; as JSON - {errors["json"]}')
-   elif media_type=='JSON' or media_type=='application/json':
-      try:
-         value = json.loads('{' + text + '}')
-      except json.JSONDecodeError as ex:
-         raise ValueError(f'Cannot parse JSON literal: {ex}')
-   elif media_type=='YAML' or media_type=='application/yaml':
-      try:
-         value = yaml.load(text,Loader=yaml.Loader)
+         return value
       except yaml.YAMLError as ex:
          raise ValueError(f'Cannot parse YAML literal: {ex}')
-   else:
-      raise ValueError(f'Unrecognized literal type {media_type}')
+   elif type==LiteralType.JSON_ARRAY:
+      if len(text)==0:
+         return []
+      try:
+         value = json.loads('[' + text + ']')
+         return value
+      except json.JSONDecodeError as ex:
+         raise ValueError(f'Cannot parse JSON array literal: {ex}')
 
-   return value
+   elif type==LiteralType.JSON_OBJECT:
+      if len(text)==0:
+         return {}
+      try:
+         value = json.loads('{' + text + '}')
+         return value
+      except json.JSONDecodeError as ex:
+         raise ValueError(f'Cannot parse JSON object literal: {ex}')
+
 
 class Compiler:
 
@@ -53,7 +53,7 @@ class Compiler:
             value = {}
             if step.parameters is not None:
                try:
-                  value = compile_literal(step.parameters.value,step.parameters.media_type)
+                  value = compile_literal(step.parameters.value,step.parameters.type)
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
             flow[index] = InvokeTask(index,step.name,value)

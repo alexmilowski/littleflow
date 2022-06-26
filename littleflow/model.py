@@ -1,9 +1,16 @@
 from dataclasses import dataclass, field
+from enum import Enum
+
+class LiteralType(Enum):
+   EMPTY = 0
+   YAML = 1
+   JSON_OBJECT = 2
+   JSON_ARRAY = 3
 
 @dataclass
 class ParameterLiteral:
    value : 'typing.Any'
-   media_type : str = None
+   type : LiteralType = LiteralType.EMPTY
    line : int = 0
    column : int = 0
 

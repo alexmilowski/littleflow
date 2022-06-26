@@ -1,10 +1,17 @@
-{{ start: true }} →
-A{{}} →
-B {{}} →
-C {{ yaml: true }} →
-D {{ "not json": true }} →
-E {{ +: true }} →
-F `JSON`{{ "json": true }} →
-G `application/json`{{ "json": true }} →
-H `YAML`{{ yaml: true }} →
-I `application/yaml`{{ yaml: true }}
+A() →
+B () →
+C (  ) →
+D (- yaml: true -) →
+E ({ "json": true }) →
+F ([1,2,3]) →
+G ([
+1,
+2,
+3
+]) →
+H (- [1,2,3] -) →
+I (-
+- 1
+- 2
+- 3
+-)
