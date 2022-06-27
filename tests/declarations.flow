@@ -1,0 +1,10 @@
+'''
+This is the main documentation for the flow
+'''
+
+→ A ({ "something" : "default_value"})
+'''
+Documentation for A
+'''
+
+A

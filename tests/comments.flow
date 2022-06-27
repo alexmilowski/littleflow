@@ -1,0 +1,4 @@
+# A comment at the beginning
+A :out → B; # This one is at the end
+:out → C
+#:out → D

@@ -1,9 +1,10 @@
 from lark import Lark, Token, Tree
 
-from .model import Workflow, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
+from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
 
 grammar = r"""
-flow: flow_statement+
+flow: doc_comment? (declaration | flow_statement)+
+declaration: ARROW NAME parameter_literal? doc_comment? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
 step: LABEL? STAR? (task_list | subflow | conditional) LABEL?
 task_list : task (OR task)*
@@ -23,6 +24,7 @@ empty_resource: "<" ">"
 json_object_resource: "<{" JSON_OBJECT_RESOURCE_BODY? "}>"
 json_array_resource: "<[" JSON_ARRAY_RESOURCE_BODY? "]>"
 yaml_resource: "<-" YAML_RESOURCE_BODY? "->"
+doc_comment: "'''" DOC_COMMENT_BODY_SINGLE? "'''" | "\"\"\"" DOC_COMMENT_BODY_DOUBLE? "\"\"\""
 ARROW: "→" | "->"
 STAR: "*"
 OR: "|"
@@ -38,8 +40,12 @@ YAML_PARAMETER_BODY: /([^-]+|(-[^)]))+/
 JSON_OBJECT_RESOURCE_BODY: /([^}]+|(}[^>]))+/
 JSON_ARRAY_RESOURCE_BODY: /([^]]+|(][^>]))+/
 YAML_RESOURCE_BODY: /([^-]+|(-[^>]))+/
+DOC_COMMENT_BODY_SINGLE: /([^']+|'[^']|''[^'])+/
+DOC_COMMENT_BODY_DOUBLE: /([^"]+|"[^"]|""[^"])+/
+COMMENT: /#[^\n]*/
 %import common.WS
 %ignore WS
+%ignore COMMENT
 """
 
 def iter_tree(top):
@@ -75,7 +81,7 @@ class Parser:
       flow = None
       statement = None
       iterate = False
-      subject = None
+      subject = workflow
       source = None
       media_tyope = None
       input_label = None
@@ -238,6 +244,11 @@ class Parser:
                index += 1
                subject = ResourceSink(index)
                realize_step(subject)
+         elif item.data=='doc_comment':
+            subject.doc = item.children[0].value
+         elif item.data=='declaration':
+            decl = Declaration(item.children[1].value)
+            subject = decl
          else:
             line = item.data.line
             column = item.data.column
