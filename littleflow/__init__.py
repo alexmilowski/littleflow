@@ -3,3 +3,4 @@ from .parser import Parser
 from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral
 from .compiler import Compiler
 from .runner import Context, Runner, FlowContext, CachingFlowContext
+from .doc import graph_name, graph

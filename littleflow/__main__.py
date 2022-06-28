@@ -3,7 +3,7 @@ import os
 
 import click
 
-from littleflow import __version__, Parser, Compiler, Context, Runner, CachingFlowContext
+from littleflow import __version__, Parser, Compiler, Context, Runner, CachingFlowContext, graph
 
 @click.group()
 def cli():
@@ -100,6 +100,20 @@ def run(limit,flow_context,show_cache,workflow):
    while (limit<0 or count<limit) and not context.ending.empty():
       count += 1
       runner.next(context,context.ending.get())
+
+@cli.command()
+@click.argument('workflow')
+def doc(workflow):
+   p = Parser()
+   c = Compiler()
+   try:
+      with open(workflow,'r') as input:
+         model = p.parse(input)
+         flow = c.compile(model)
+   except FileNotFoundError as ex:
+      print(f'Cannot open {file}',file=sys.stderr)
+
+   graph(flow,sys.stdout)
 
 
 if __name__=='__main__':
