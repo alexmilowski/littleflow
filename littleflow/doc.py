@@ -16,7 +16,7 @@ def shortdesc(doc):
    oneliner, _, rest = doc.strip().partition('\n')
    return oneliner
 
-def graph(flow,output,format='mermaid',name='workflow'):
+def graph(flow,output,format='mermaid',name='workflow',embed_docs=True):
    assert format=='mermaid', 'Only mermaid is currently supported'
    print(f'stateDiagram-v2',file=output)
    size = len(flow)
@@ -31,8 +31,6 @@ def graph(flow,output,format='mermaid',name='workflow'):
    for index,row in enumerate(flow.F):
       source = flow[index]
       source_name = graph_name(source,end=size-1)
-      if isinstance(source,InvokeFlow):
-         print(f'  state {source_name} <<fork>>',file=output)
       for target_index, value in enumerate(row.flatten()):
          if value==0:
             continue
@@ -40,7 +38,7 @@ def graph(flow,output,format='mermaid',name='workflow'):
          #print(source,target)
          target_name = graph_name(target,end=size-1)
          print(f'  {source_name}-->{target_name}',file=output)
-         if isinstance(target,InvokeTask) and target.doc is not None:
+         if  embed_docs and isinstance(target,InvokeTask) and target.doc is not None:
             print(f'  note left of {target.name}',file=output)
             print(f'    {shortdesc(target.doc)}',file=output)
             print(f'  end note',file=output)
