@@ -1,0 +1,20 @@
+'''
+This is an example of a documented workflow
+'''
+
+→ get_basket
+'''
+Pickup a basket
+'''
+
+→ pick
+'''
+Pick fruit
+'''
+
+→ eat
+'''
+Yum!
+'''
+
+get_basket → pick → eat

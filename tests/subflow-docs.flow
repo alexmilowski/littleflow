@@ -1,0 +1,10 @@
+→ A '''Task A'''
+→ B '''Task B'''
+→ C '''Task C'''
+→ D '''Task D'''
+→ E '''Task E'''
+
+A → {
+  B → C
+  D
+} → E
