@@ -17,6 +17,7 @@ class Sink(Invocation):
 class InvokeTask(Invocation):
    name: str
    parameters : 'typing.Any' = None
+   doc: str = None
 
 @dataclass
 class InvokeFlow(Invocation):

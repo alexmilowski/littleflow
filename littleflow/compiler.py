@@ -58,6 +58,9 @@ class Compiler:
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
             flow[index] = InvokeTask(index,step.name,value)
+            decl = model.declarations.get(step.name)
+            if decl is not None:
+               flow[index].doc = decl.doc
          elif isinstance(step,LiteralSource):
             try:
                value = compile_literal(step.value,step.type)

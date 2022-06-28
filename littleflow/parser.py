@@ -248,6 +248,10 @@ class Parser:
             subject.doc = item.children[0].value
          elif item.data=='declaration':
             decl = Declaration(item.children[1].value)
+            if decl.name in workflow.declarations:
+               # warning needed, last one wins
+               pass
+            workflow.declarations[decl.name] = decl
             subject = decl
          else:
             line = item.data.line
