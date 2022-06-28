@@ -37,3 +37,6 @@ class Flow:
 
    def __setitem__(self,index,value):
       self._tasks[index] = value
+
+   def __len__(self):
+      return len(self._tasks)
