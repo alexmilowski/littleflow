@@ -176,6 +176,7 @@ class Context:
                immediate[index] = 1
             elif isinstance(invocation,Sink):
                self.output_for(index,input)
+               immediate[index] = 1
             else:
                immediate[index] = 1
 
