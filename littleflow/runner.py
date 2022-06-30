@@ -3,8 +3,40 @@ from queue import SimpleQueue
 import numpy as np
 from .flow import Flow, Source, Sink, InvokeTask
 
+class InputCache:
+
+   def append_input_for(self,source,target,value):
+      pass
+
+   def input_for(self,index):
+      return {}
+
+class MemoryInputCache(InputCache):
+
+   def __init__(self):
+      self._cache = {}
+
+   def append_input_for(self,source,target,value):
+      input = self._cache.get(target)
+      if input is None:
+         self._cache[target] = value
+      elif type(input)==dict:
+         if len(input)==0:
+            self._cache[target] = value
+         else:
+            self._cache[target] = [input,value]
+      else:
+         input.append(value)
+
+   def input_for(self,index):
+      input = self._cache.get(index)
+      if input is not None:
+         del self._cache[index]
+         return input
+      return {}
+
 class Context:
-   def __init__(self,flow,state=None,activation=None):
+   def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache()):
       self._flow = flow
       self._A = activation if activation is not None else np.zeros((self.F.shape[0],1),dtype=int)
       self._a = flow.F.sum(axis=0)
@@ -17,6 +49,7 @@ class Context:
       self._S = state if state is not None else np.zeros((self.F.shape[0],1),dtype=int)
       self._S[0] = 1
       self._ends = SimpleQueue()
+      self._cache = cache
 
    @property
    def flow(self):
@@ -64,6 +97,10 @@ class Context:
    def ending(self):
       return self._ends
 
+   @property
+   def cache(self):
+      return self._cache
+
    def start(self,tasks):
       """
       Called when steps are started. The tasks argument is a boolean vector
@@ -107,15 +144,16 @@ class Context:
          self.output(value)
 
    def append_input_for(self,source,target,value):
-      pass
+      self._cache.append_input_for(source,target,value)
 
    def input_for(self,index):
-      return {}
+      return self._cache.input_for(index)
 
    def start_task(self,invocation,input):
       immediate = np.zeros(self.S.shape,dtype=int)
       immediate[invocation.index] = 1
       self.ending.put(immediate)
+
 
 
 class Runner:
@@ -143,32 +181,3 @@ class Runner:
       if (1*N).sum()>0:
          context.start(N)
       return context.S.sum()>0
-
-class CachingContext(Context):
-
-   def __init__(self,flow,state=None,activation=None):
-      super().__init__(flow,state=state,activation=activation)
-      self._cache = {}
-
-   @property
-   def cache(self):
-      return self._cache
-
-   def append_input_for(self,source,target,value):
-      input = self._cache.get(target)
-      if input is None:
-         self._cache[target] = value
-      elif type(input)==dict:
-         if len(input)==0:
-            self._cache[target] = value
-         else:
-            self._cache[target] = [input,value]
-      else:
-         input.append(value)
-
-   def input_for(self,index):
-      input = self._cache.get(index)
-      if input is not None:
-         del self._cache[index]
-         return input
-      return {}
