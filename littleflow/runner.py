@@ -1,4 +1,5 @@
 from queue import SimpleQueue
+import types
 
 import numpy as np
 from .flow import Flow, Source, Sink, InvokeTask
@@ -35,8 +36,52 @@ class MemoryInputCache(InputCache):
          return input
       return {}
 
+class TaskContext:
+
+   def invoke(self,context,invocation,input):
+      immediate = np.zeros(context.S.shape,dtype=int)
+      immediate[invocation.index] = 1
+      context.ending.put(immediate)
+
+def invoker(func):
+   setattr(func,'__invoker__',True)
+   return func
+
+class FunctionTaskContext(TaskContext):
+
+   def __init__(self,lookup):
+      self._lookup = lookup
+
+   def invoke(self,context,invocation,input):
+      f = self._lookup.get(invocation.name)
+      if f is None:
+         raise ValueError(f'Cannot find task {invocation.name} in function lookup.')
+      if not isinstance(f,types.FunctionType):
+         raise ValueError(f'Task {invocation.name} resolves to non-function')
+      if not hasattr(f,'__invoker__') or not getattr(f,'__invoker__'):
+         args = [input]
+         keywords = {}
+         if invocation.parameters is not None:
+            if type(invocation.parameters)==dict:
+               for key,value in invocation.parameters.items():
+                  keywords[key] = value
+            elif type(invocation.parameters)==list:
+               args += list
+      else:
+         args, keywords, f = f(input,invocation.parameters)
+
+      output = f(*args,**keywords)
+      if type(output)!=dict and type(output)!=list:
+         output = [output]
+
+      context.output_for(invocation.index,output)
+      immediate = np.zeros(context.S.shape,dtype=int)
+      immediate[invocation.index] = 1
+      context.ending.put(immediate)
+
+
 class Context:
-   def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache()):
+   def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache(),task_context=TaskContext()):
       self._flow = flow
       self._A = activation if activation is not None else np.zeros((self.F.shape[0],1),dtype=int)
       self._a = flow.F.sum(axis=0)
@@ -50,6 +95,7 @@ class Context:
       self._S[0] = 1
       self._ends = SimpleQueue()
       self._cache = cache
+      self._task_context = task_context
 
    @property
    def flow(self):
@@ -150,11 +196,7 @@ class Context:
       return self._cache.input_for(index)
 
    def start_task(self,invocation,input):
-      immediate = np.zeros(self.S.shape,dtype=int)
-      immediate[invocation.index] = 1
-      self.ending.put(immediate)
-
-
+      self._task_context.invoke(self,invocation,input)
 
 class Runner:
 
