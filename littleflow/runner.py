@@ -67,11 +67,13 @@ class FunctionTaskContext(TaskContext):
                   keywords[key] = value
             elif type(invocation.parameters)==list:
                args += list
+         output = f(*args,**keywords)
       else:
-         args, keywords, f = f(input,invocation.parameters)
+         output = f(input,invocation.parameters)
 
-      output = f(*args,**keywords)
-      if type(output)!=dict and type(output)!=list:
+      if output is None:
+         output = {}
+      elif type(output)!=dict and type(output)!=list:
          output = [output]
 
       context.output_for(invocation.index,output)
@@ -146,6 +148,14 @@ class Context:
    @property
    def cache(self):
       return self._cache
+
+   @property
+   def task_context(self):
+      return self._task_context
+
+   @task_context.setter
+   def task_context(self,value):
+      self._task_context = value
 
    def start(self,tasks):
       """

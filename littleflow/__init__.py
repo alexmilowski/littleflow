@@ -4,3 +4,4 @@ from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterat
 from .compiler import Compiler
 from .runner import Context, Runner, InputCache, MemoryInputCache, TaskContext, FunctionTaskContext, invoker
 from .doc import graph_name, graph
+from .utils import run_workflow
