@@ -70,7 +70,24 @@ class Context:
       whose position correspond to the indexed steps that should be started.
       The default implementation immediately ends tasks.
       """
-      self.ending.put(tasks)
+      immediate = np.zeros(tasks.shape,dtype=int)
+      for index,task in enumerate(tasks.flatten()):
+         if task:
+            invocation = self.flow[index]
+            input = self.input_for(index)
+            assert input is not None, f'None value return for {index}'
+            if isinstance(invocation,InvokeTask):
+               self.start_task(invocation,input)
+            elif isinstance(invocation,Source):
+               self.output_for(index,invocation.value)
+               immediate[index] = 1
+            elif isinstance(invocation,Sink):
+               self.output_for(index,input)
+            else:
+               immediate[index] = 1
+
+      if immediate.sum()>0:
+         self.ending.put(immediate)
 
    def end(self,tasks):
       """
@@ -78,6 +95,28 @@ class Context:
       whose position correspond to the indexed steps that have finished.
       """
       pass
+
+   def output(self,value):
+      pass
+
+   def output_for(self,index,value):
+      for target, transition in enumerate(self.F[index].flatten()):
+         if transition > 0:
+            self.append_input_for(index,target,value)
+      if index==(self.F.shape[0]-1):
+         self.output(value)
+
+   def append_input_for(self,source,target,value):
+      pass
+
+   def input_for(self,index):
+      return {}
+
+   def start_task(self,invocation,input):
+      immediate = np.zeros(self.S.shape,dtype=int)
+      immediate[invocation.index] = 1
+      self.ending.put(immediate)
+
 
 class Runner:
 
@@ -105,50 +144,7 @@ class Runner:
          context.start(N)
       return context.S.sum()>0
 
-class FlowContext(Context):
-
-   def output(self,value):
-      pass
-
-   def output_for(self,index,value):
-      for target, transition in enumerate(self.F[index].flatten()):
-         if transition > 0:
-            self.append_input_for(index,target,value)
-      if index==(self.F.shape[0]-1):
-         self.output(value)
-
-   def append_input_for(self,source,target,value):
-      pass
-
-   def input_for(self,index):
-      return {}
-
-   def start(self,tasks):
-      immediate = np.zeros(tasks.shape,dtype=int)
-      for index,task in enumerate(tasks.flatten()):
-         if task:
-            invocation = self.flow[index]
-            input = self.input_for(index)
-            assert input is not None, f'None value return for {index}'
-            if isinstance(invocation,InvokeTask):
-               self.start_task(invocation,input)
-            elif isinstance(invocation,Source):
-               self.output_for(index,invocation.value)
-               immediate[index] = 1
-            elif isinstance(invocation,Sink):
-               self.output_for(index,input)
-            else:
-               immediate[index] = 1
-
-      if immediate.sum()>0:
-         self.ending.put(immediate)
-
-   def start_task(self,invocation,input):
-      immediate = np.zeros(self.S.shape,dtype=int)
-      immediate[invocation.index] = 1
-      self.ending.put(immediate)
-
-class CachingFlowContext(FlowContext):
+class CachingContext(Context):
 
    def __init__(self,flow,state=None,activation=None):
       super().__init__(flow,state=state,activation=activation)

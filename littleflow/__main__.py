@@ -3,7 +3,7 @@ import os
 
 import click
 
-from littleflow import __version__, Parser, Compiler, Context, Runner, CachingFlowContext, graph
+from littleflow import __version__, Parser, Compiler, Runner, CachingContext, graph
 
 @click.group()
 def cli():
@@ -29,21 +29,7 @@ def compile(files):
       except FileNotFoundError as ex:
          print(f'Cannot open {file}',file=sys.stderr)
 
-class LogContext(Context):
-
-   def __init__(self,flow):
-      super().__init__(flow)
-
-   def end(self,tasks):
-      super().end(tasks)
-      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.a.flatten()))
-
-   def start(self,tasks):
-      super().start(tasks)
-      E = 1*tasks
-      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.a.flatten()))
-
-class LogFlowContext(CachingFlowContext):
+class LogContext(CachingContext):
 
    def __init__(self,flow,state=None,activation=None,show_cache=False):
       super().__init__(flow,state=state,activation=activation)
