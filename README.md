@@ -7,7 +7,7 @@ A flow language
 This simple example can compile and run a workflow:
 
 ```python
-from littleflow import Parser, Compiler, FlowContext, Runner
+from littleflow import Parser, Compiler, Context, Runner
 
 workflow = """
 A → {
@@ -22,26 +22,43 @@ c = Compiler()
 model = p.parse(workflow)
 flow = c.compile(model)
 
-class NonExecutingContext(Context):
-
-   def __init__(self,flow):
-      super().__init__(flow)
-      self._E = None
-
-   def start(self,tasks):
-      self._E = 1*tasks
-
-   @property
-   def E(self):
-      return self._E
-
-
-context = FlowContext(flow)
+context = Context(flow)
 runner = Runner()
 
 context.start(context.initial)
 while not context.ending.empty():
    runner.next(context,context.ending.get())
+```
+
+This is further simplified with a utility function that also supports function lookups for tasks:
+
+```python
+from littleflow import run_workflow
+
+workflow = """
+A → {
+  B → C
+  D
+} → E
+"""
+
+def A(input):
+   print('Hello ',end='')
+
+def B(input):
+   print('workflow ',end='')
+
+def D(input):
+   print('world, ',end='')
+
+def C(input):
+   print('how are ',end='')
+
+def E(input):
+   print('you?')
+
+run_workflow(workflow,locals())
+
 ```
 
 Typically, a real usage would implement both the `start()` and `end()` methods
