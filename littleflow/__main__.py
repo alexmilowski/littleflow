@@ -66,10 +66,9 @@ class LogContext(Context):
 
 @cli.command()
 @click.option('--limit',type=int,default=-1,help='Iteration limit')
-@click.option('--flow-context',is_flag=True)
 @click.option('--show-cache',is_flag=True)
 @click.argument('workflow')
-def run(limit,flow_context,show_cache,workflow):
+def run(limit,show_cache,workflow):
    p = Parser()
    c = Compiler()
    try:
@@ -80,7 +79,7 @@ def run(limit,flow_context,show_cache,workflow):
       print(f'Cannot open {file}',file=sys.stderr)
 
    runner = Runner()
-   context = LogFlowContext(flow,show_cache=show_cache) if flow_context else LogContext(flow)
+   context = LogContext(flow)
    context.start(context.initial)
    count = 0
    while (limit<0 or count<limit) and not context.ending.empty():
