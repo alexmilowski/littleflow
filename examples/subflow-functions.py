@@ -7,19 +7,19 @@ A → {
 } → E
 """
 
-def A(input):
+def A():
    print('Hello ',end='')
 
-def B(input):
+def B():
    print('workflow ',end='')
 
-def D(input):
+def D():
    print('world, ',end='')
 
-def C(input):
+def C():
    print('how are ',end='')
 
-def E(input):
+def E():
    print('you?')
 
 run_workflow(workflow,locals())

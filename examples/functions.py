@@ -1,12 +1,14 @@
-from littleflow import run_workflow, invoker
+from littleflow import run_workflow, pass_input, pass_parameters
 
-def A(input,say):
+def A(say):
    print(say,end='')
 
+@pass_input
 def B(input):
    print(' World',end='')
 
-@invoker
+@pass_parameters
+@pass_input
 def C(input,parameters):
    print('!')
 

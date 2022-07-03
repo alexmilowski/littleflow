@@ -43,8 +43,18 @@ class TaskContext:
       immediate[invocation.index] = 1
       context.ending.put(immediate)
 
-def invoker(func):
-   setattr(func,'__invoker__',True)
+def pass_parameters(func):
+   if hasattr(func,'__invocation__'):
+      getattr(func,'__invocation__').append('raw_parameters')
+   else:
+      setattr(func,'__invocation__',['raw_parameters'])
+   return func
+
+def pass_input(func):
+   if hasattr(func,'__invocation__'):
+      getattr(func,'__invocation__').append('input')
+   else:
+      setattr(func,'__invocation__',['input'])
    return func
 
 class FunctionTaskContext(TaskContext):
@@ -58,18 +68,20 @@ class FunctionTaskContext(TaskContext):
          raise ValueError(f'Cannot find task {invocation.name} in function lookup.')
       if not isinstance(f,types.FunctionType):
          raise ValueError(f'Task {invocation.name} resolves to non-function')
-      if not hasattr(f,'__invoker__') or not getattr(f,'__invoker__'):
-         args = [input]
-         keywords = {}
-         if invocation.parameters is not None:
+      options = getattr(f,'__invocation__') if hasattr(f,'__invocation__') else []
+      args = [input] if 'input' in options else []
+      keywords = {}
+      if invocation.parameters is not None:
+         if 'raw_parameters' not in options:
             if type(invocation.parameters)==dict:
                for key,value in invocation.parameters.items():
                   keywords[key] = value
             elif type(invocation.parameters)==list:
                args += list
-         output = f(*args,**keywords)
-      else:
-         output = f(input,invocation.parameters)
+         else:
+            args.append(invocation.parameters)
+
+      output = f(*args,**keywords)
 
       if output is None:
          output = {}
