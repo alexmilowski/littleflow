@@ -51,12 +51,12 @@ class LogContext(Context):
       super().append_input_for(source,target,value)
 
    def end(self,tasks):
-      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.a.flatten()))
+      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.T.flatten()))
       super().end(tasks)
 
    def start(self,tasks):
       E = 1*tasks
-      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.a.flatten()))
+      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.T.flatten()))
       super().start(tasks)
 
    def start_task(self,invocation,input):

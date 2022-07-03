@@ -1,4 +1,4 @@
-__version__=(0,5,0)
+__version__=(0,6,0)
 __author__='Alex Miłowski'
 __author_email__='alex@milowski.com'
 from .parser import Parser

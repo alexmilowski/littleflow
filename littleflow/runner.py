@@ -98,9 +98,9 @@ class Context:
    def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache(),task_context=TaskContext()):
       self._flow = flow
       self._A = activation if activation is not None else np.zeros((self.F.shape[0],1),dtype=int)
-      self._a = flow.F.sum(axis=0)
-      self._a[0] = 1
-      self._a = self._a.reshape((self.F.shape[0],1))
+      self._T = flow.F.sum(axis=0)
+      self._T[0] = 1
+      self._T = self._T.reshape((self.F.shape[0],1))
       self._initial = np.zeros((self.F.shape[0],1),dtype=int)
       self._initial[0] = 1
       self._initial = self._initial>0
@@ -147,11 +147,11 @@ class Context:
       return self._A
 
    @property
-   def a(self):
+   def T(self):
       """
       The activation threshold
       """
-      return self._a
+      return self._T
 
    @property
    def ending(self):
@@ -238,8 +238,8 @@ class Runner:
       context._A = context._A + context.F.T.dot(E)
       context.end(E>0)
       # TODO: should we allow more than zero/one vectorss
-      N = context.A >= context.a
-      context._A = context.A - 1*N * context.a
+      N = context.A >= context.T
+      context._A = context.A - 1*N * context.T
       context._S = context.S - E + 1*N
       # Guarantee positive semi-definite
       context._S = context._S + np.multiply(context._S,-1*(context._S<0))
