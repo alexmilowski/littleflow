@@ -106,7 +106,8 @@ class Context:
       self._initial = self._initial>0
       # TODO: do we really need to compute S?
       self._S = state if state is not None else np.zeros((self.F.shape[0],1),dtype=int)
-      self._S[0] = 1
+      if state is None:
+         self._S[0] = 1
       self._ends = SimpleQueue()
       self._cache = cache
       self._task_context = task_context
@@ -169,6 +170,9 @@ class Context:
    def task_context(self,value):
       self._task_context = value
 
+   def new_transition(self):
+      return np.zeros((self.F.shape[0],1),dtype=int)
+
    def start(self,tasks):
       """
       Called when steps are started. The tasks argument is a boolean vector
@@ -202,7 +206,7 @@ class Context:
       """
       pass
 
-   def output(self,value):
+   def ended(self,value):
       pass
 
    def output_for(self,index,value):
@@ -210,7 +214,7 @@ class Context:
          if transition > 0:
             self.append_input_for(index,target,value)
       if index==(self.F.shape[0]-1):
-         self.output(value)
+         self.ended(value)
 
    def append_input_for(self,source,target,value):
       self._cache.append_input_for(source,target,value)
@@ -220,6 +224,10 @@ class Context:
 
    def start_task(self,invocation,input):
       self._task_context.invoke(self,invocation,input)
+
+   def accumulate(self,value):
+      pass
+
 
 class Runner:
 
@@ -235,7 +243,9 @@ class Runner:
       """
       # allow array of booleans
       E = 1*E
-      context._A = context._A + context.F.T.dot(E)
+      activations = context.F.T.dot(E)
+      context.accumulate(activations)
+      context._A = context._A + activations
       context.end(E>0)
       # TODO: should we allow more than zero/one vectorss
       N = context.A >= context.T

@@ -40,7 +40,7 @@ class LogContext(Context):
          print(self.cache)
       return super().input_for(index)
 
-   def output(self,value):
+   def ended(self,value):
       print(f'output → {value}')
 
    def output_for(self,index,value):
