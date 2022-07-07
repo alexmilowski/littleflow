@@ -1,4 +1,5 @@
 import os
+import sys
 from time import sleep
 from random import random
 import threading
@@ -6,6 +7,15 @@ import threading
 from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener
 from rqse import EventClient, message, receipt_for, ReceiptListener
 
+if len(sys.argv)>1:
+   wait_period = int(sys.argv[1])
+else:
+   wait_period = 3
+
+if len(sys.argv)>2:
+   workflow_id = sys.argv[2]
+else:
+   workflow_id = 'littleflow:test:workflow-1'
 
 workflow = """
 A → {
@@ -14,7 +24,6 @@ A → {
 } → E
 """
 
-workflow_id = 'littleflow:test:workflow-1'
 
 class RandomWait(TaskStartListener):
 
@@ -23,7 +32,7 @@ class RandomWait(TaskStartListener):
       name = event.get('name')
       index = event.get('index')
       self.append(receipt_for(event_id))
-      wait = round(random()*3,3)
+      wait = round(random()*wait_period,3)
       print(f'Workflow {workflow_id} start task {name} ({index}), waiting {wait}s')
       sleep(wait)
       event = {'name':name,'index':index,'workflow':workflow_id}
@@ -32,13 +41,6 @@ class RandomWait(TaskStartListener):
 
 stream_key = 'littleflow:test:run'
 client = EventClient(stream_key,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
-
-# cleanup
-client.connection.delete(stream_key)
-client.connection.delete(workflow_id)
-client.connection.delete(workflow_id+':A')
-client.connection.delete(workflow_id+':S')
-
 
 # we need something that will respond to end tasks and the algorithm forward
 end_listener = TaskEndListener(stream_key,'ending')
@@ -82,7 +84,7 @@ class StopAtEnd(LifecycleListener):
       return True
 
 
-stop_listener = StopAtEnd(stream_key,'stopping')
+stop_listener = StopAtEnd(stream_key,'stopping',workflows_key='littleflow:test:workflows',inprogress_key='littleflow:test:workflows:inprogress')
 
 stopper = threading.Thread(target=lambda : stop_listener.listen())
 stopper.start()

@@ -105,10 +105,16 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
 
    key = prefix + workflow_id
 
-   remote_context = RemoteTaskContext(event_client,workflow_id,key)
-   context = RedisContext(flow,event_client,key,workflow_id,cache=RedisInputCache(event_client.connection,key),task_context=remote_context)
+   redis_client = event_client.connection
 
-   save_workflow(event_client.connection,flow,key)
+   redis_client.delete(key)
+   redis_client.delete(key+':A')
+   redis_client.delete(key+':S')
+
+   remote_context = RemoteTaskContext(event_client,workflow_id,key)
+   context = RedisContext(flow,event_client,key,workflow_id,cache=RedisInputCache(redis_client,key),task_context=remote_context)
+
+   save_workflow(redis_client,flow,key)
 
    event_client.append(message({'workflow':workflow_id},kind='start-workflow'))
    context.start(context.initial)
@@ -119,10 +125,23 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
 
 class LifecycleListener(EventListener):
 
-   def __init__(self,key,group,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
+   def __init__(self,key,group,workflows_key=None,inprogress_key=None,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
       super().__init__(key,group,select=['start-workflow','end-workflow'],server=server,port=port,username=username,password=password,pool=pool)
+      self._workflows_key = workflows_key
+      self._inprogress_key = inprogress_key
 
    def process(self,event_id, event):
+      kind = event.get('kind')
+      workflow_id = event.get('workflow')
+      if workflow_id is not None:
+         if kind=='start-workflow':
+            if self._workflows_key is not None:
+               self.connection.sadd(self._workflows_key,workflow_id)
+            if self._inprogress_key is not None:
+               self.connection.sadd(self._inprogress_key,workflow_id)
+         elif kind=='end-workflow':
+            if self._inprogress_key is not None:
+               self.connection.srem(self._inprogress_key,workflow_id)
       self.append(receipt_for(event_id))
       return True
 
