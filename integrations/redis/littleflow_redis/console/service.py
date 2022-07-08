@@ -23,11 +23,14 @@ def index():
 def assets(path):
    return send_from_directory(assets_dir, path)
 
-@service.route('/service/<path:path>')
+@service.route('/service/<path:path>',methods=['GET','DELETE'])
 def device_status_proxy(path):
    url = current_app.config['API']
    url += path
-   response = requests.get(url)
+   if request.method=='GET':
+      response = requests.get(url)
+   elif request.method=='DELETE':
+      response = requests.delete(url)
    headers = {}
    if 'Content-Type' in response.headers:
       headers['Content-Type'] = response.headers['Content-Type']

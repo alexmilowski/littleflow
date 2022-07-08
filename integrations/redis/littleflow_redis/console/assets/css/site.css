@@ -7,8 +7,9 @@
    display: inline-block;
 }
 
-#workflows .uk-accordion-title span.status {
+#workflows .uk-accordion-title span.state {
    vertical-align: top;
+   padding-left: 1em;
 }
 
 svg .statediagram-state.started rect {
@@ -17,4 +18,19 @@ svg .statediagram-state.started rect {
 
 svg .statediagram-state.ended rect {
    fill: rgba(0,0,100,0.5) !important
+}
+
+tr.started {
+   background-color: rgba(0,100,0,0.25);
+}
+tr.started:nth-of-type(odd) {
+   background-color: rgba(0,100,0,0.15) !important;
+}
+
+tr.ended {
+   background-color: rgba(0,0,100,0.25);
+}
+
+tr.ended:nth-of-type(odd) {
+   background-color: rgba(0,0,100,0.15) !important;
 }
