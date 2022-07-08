@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 import numpy as np
@@ -9,7 +9,7 @@ from rqse import EventClient, EventListener, message, receipt_for
 from .context import RedisInputCache
 
 def tstamp():
-   return datetime.utcnow().timestamp()
+   return datetime.now(timezone.utc).isoformat()
 
 def workflow_state(client,key,default=None):
    value = client.get(key+':state')
@@ -55,18 +55,18 @@ class RedisContext(Context):
 
    def accumulate(self,A):
       if (1*A).sum()>0:
-         self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
+         self._client.connection.lpush(self._key_A,str(tstamp())+' '+str(A.flatten())[1:-1])
 
    def start(self,N):
       starting = 1*N
-      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(starting.flatten())[1:-1])
+      self._client.connection.lpush(self._key_S,str(tstamp())+' '+str(starting.flatten())[1:-1])
       super().start(N)
       A = - starting * self.T
-      self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
+      self._client.connection.lpush(self._key_A,str(tstamp())+' '+str(A.flatten())[1:-1])
 
    def end(self,N):
       ending = - 1*N
-      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(ending.flatten())[1:-1])
+      self._client.connection.lpush(self._key_S,str(tstamp())+' '+str(ending.flatten())[1:-1])
       super().end(N)
 
    def ended(self,value):
@@ -95,9 +95,9 @@ def trace_vector(client,key):
       current += page_size
       for value in response:
          value = value.decode('UTF-8')
-         tstamp, _, repl = value.partition(':')
+         tstamp, _, repl = value.partition(' ')
          result = np.fromstring(repl,dtype=int,sep=' ')
-         yield float(tstamp), result
+         yield datetime.fromisoformat(tstamp), result
 
 def compute_vector(client,key):
    result = None
@@ -110,7 +110,7 @@ def compute_vector(client,key):
       current += page_size
       for value in response:
          value = value.decode('UTF-8')
-         tstamp, _, repl = value.partition(':')
+         tstamp, _, repl = value.partition(' ')
          if result is None:
             result = np.fromstring(repl,dtype=int,sep=' ')
          else:
