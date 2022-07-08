@@ -99,6 +99,8 @@ def simulate(stream,wait_period):
          sleep(wait)
          event = {'name':name,'index':index,'workflow':workflow_id}
          self.append(message(event,kind='end-task'))
+         
+         return True
 
    # we need something to simular tasks. This will wait a random number of seconds.
    waiter = RandomWait(stream,'starting')
