@@ -1,3 +1,5 @@
 rqse
-flask
+Flask
 click
+flasgger
+pyyaml
