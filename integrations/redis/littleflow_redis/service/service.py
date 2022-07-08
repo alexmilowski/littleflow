@@ -127,7 +127,7 @@ def workflows():
    start = int(request.args.get('next',0))
    size = int(request.args.get('size',50))
    items = client.lrange(current_app.config['WORKFLOWS_KEY'],start,start+size-1)
-   convert = lambda x : {'id':x[9:],'status':workflow_state(client,x,default='UNKNOWN')}
+   convert = lambda x : {'id':x[9:],'state':workflow_state(client,x,default='UNKNOWN')}
    workflows = [convert(value.decode('UTF-8')) for value in items]
    response =jsonify(workflows)
    if len(items)==size:
