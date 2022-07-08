@@ -2,7 +2,7 @@ from .flow import Source, Sink, InvokeTask, InvokeFlow
 
 def graph_name(obj,end=-1):
    if isinstance(obj,InvokeTask):
-      return obj.name
+      return f'{obj.name}{obj.index}'
    elif isinstance(obj,Source):
       return '[*]'
    elif isinstance(obj,Sink):
@@ -19,6 +19,7 @@ def shortdesc(doc):
 def graph(flow,output,format='mermaid',name='workflow',embed_docs=True):
    assert format=='mermaid', 'Only mermaid is currently supported'
    print(f'stateDiagram-v2',file=output)
+   print('  direction LR',file=output)
    size = len(flow)
    for index in range(size):
       invocation = flow[index]
@@ -27,6 +28,8 @@ def graph(flow,output,format='mermaid',name='workflow',embed_docs=True):
          print(f'  state {name} <<fork>>',file=output)
       elif isinstance(invocation,Sink) and index!=(size-1):
          print(f'  state {name} <<join>>',file=output)
+      elif isinstance(invocation,InvokeTask):
+         print(f'  state "{invocation.name}" as {name}',file=output)
 
    for index,row in enumerate(flow.F):
       source = flow[index]
