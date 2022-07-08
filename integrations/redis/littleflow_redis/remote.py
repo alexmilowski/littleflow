@@ -11,9 +11,9 @@ from .context import RedisInputCache
 def tstamp():
    return datetime.utcnow().timestamp()
 
-def workflow_state(client,key):
+def workflow_state(client,key,default=None):
    value = client.get(key+':state')
-   return value.decode('UTF-8') if value is not None else None
+   return value.decode('UTF-8') if value is not None else default
 
 def set_workflow_state(client,key,value):
    return client.set(key+':state',value)
