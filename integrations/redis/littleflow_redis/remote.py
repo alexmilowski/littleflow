@@ -11,6 +11,15 @@ from .context import RedisInputCache
 def tstamp():
    return datetime.utcnow().timestamp()
 
+def workflow_state(client,key):
+   value = client.get(key+':state')
+   return value.decode('UTF-8') if value is not None else None
+
+def set_workflow_state(client,key,value):
+   return client.set(key+':state',value)
+
+def is_running(client,key):
+   return workflow_state(client,key)=='RUNNING'
 
 class RemoteTaskContext(FunctionTaskContext):
 
@@ -137,6 +146,7 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
    context = RedisContext(flow,event_client,key,workflow_id,cache=RedisInputCache(redis_client,key),task_context=remote_context)
 
    save_workflow(redis_client,flow,key)
+   set_workflow_state(redis_client,key,'RUNNING')
 
    event_client.append(message({'workflow':workflow_id},kind='start-workflow'))
 
@@ -165,6 +175,7 @@ class LifecycleListener(EventListener):
          elif kind=='end-workflow':
             if self._inprogress_key is not None:
                self.connection.srem(self._inprogress_key,workflow_id)
+            set_workflow_state(self.connection,workflow_id,'FINISHED')
       self.append(receipt_for(event_id))
       return True
 
@@ -194,6 +205,9 @@ class TaskEndListener(EventListener):
          print('The task index attribute is missing.',file=sys.stderr)
          return False
       print(f'Workflow {workflow_id} end for task {name} ({index})')
+      if not is_running(self.connection,workflow_id):
+         print(f'Workflow {workflow_id} has been terminated')
+         return True
       key = self._prefix + workflow_id
       context = restore_workflow_state(self, key, workflow_id)
       ended = context.new_transition()
