@@ -159,7 +159,7 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
 class LifecycleListener(EventListener):
 
    def __init__(self,key,group,workflows_key=None,inprogress_key=None,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-workflow','end-workflow'],server=server,port=port,username=username,password=password,pool=pool)
+      super().__init__(key,group,select=['start-workflow','end-workflow','terminated-workflow'],server=server,port=port,username=username,password=password,pool=pool)
       self._workflows_key = workflows_key
       self._inprogress_key = inprogress_key
 
@@ -176,6 +176,9 @@ class LifecycleListener(EventListener):
             if self._inprogress_key is not None:
                self.connection.srem(self._inprogress_key,workflow_id)
             set_workflow_state(self.connection,workflow_id,'FINISHED')
+         elif kind=='terminated-workflow':
+            if self._inprogress_key is not None:
+               self.connection.srem(self._inprogress_key,workflow_id)
       self.append(receipt_for(event_id))
       return True
 
@@ -205,9 +208,6 @@ class TaskEndListener(EventListener):
          print('The task index attribute is missing.',file=sys.stderr)
          return False
       print(f'Workflow {workflow_id} end for task {name} ({index})')
-      if not is_running(self.connection,workflow_id):
-         print(f'Workflow {workflow_id} has been terminated')
-         return True
       key = self._prefix + workflow_id
       context = restore_workflow_state(self, key, workflow_id)
       ended = context.new_transition()
@@ -215,8 +215,31 @@ class TaskEndListener(EventListener):
       context.ending.put(ended)
       self.append(receipt_for(event_id))
 
+      if not is_running(self.connection,workflow_id):
+         print(f'Workflow {workflow_id} has been terminated')
+         state = workflow_state(self.connection,key)
+         if state=='TERMINATING':
+            set_workflow_state(self.connection,key,'TERMINATED')
+            self.append(message({'workflow':workflow_id },kind='terminated-workflow'))
+         return True
+
       runner = Runner()
       while not context.ending.empty():
          runner.next(context,context.ending.get())
 
       return True
+
+def terminate_workflow(client,key,inprogress_key=None):
+   if client.exists(key)==0:
+      return
+   set_workflow_state(client,key,'TERMINATING')
+   if inprogress_key is not None:
+      client.srem(inprogress_key,key)
+
+def delete_workflow(client,key,workflows_key=None):
+   client.delete(key)
+   client.delete(key+':A')
+   client.delete(key+':S')
+   client.delete(key+':state')
+   if workflows_key is not None:
+      client.lrem(workflows_key,0,key)

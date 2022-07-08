@@ -5,7 +5,7 @@ from flasgger import Swagger, swag_from, validate
 import yaml
 import redis
 
-from littleflow_redis import restore_workflow, compute_vector, trace_vector, workflow_state
+from littleflow_redis import restore_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow
 
 class Config:
    REDIS_SERVICE = '0.0.0.0:6379'
@@ -154,15 +154,32 @@ def inprogress():
    workflows = [value.decode('UTF-8')[9:] for value in items]
    return jsonify(workflows)
 
-@service.route('/workflows/<workflow_id>',methods=['GET'])
+@service.route('/workflows/<workflow_id>',methods=['GET','DELETE'])
 def get_workflow(workflow_id):
    """Returns a workflow
    ---
    """
    client = get_redis()
    key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+   if request.method=='DELETE':
+      if client.sismember(current_app.config['INPROGRESS_KEY'],key)>0:
+         return jsonify(error(f'Workflow {workflow_id} is running and cannot be deleted.')), 400
+      delete_workflow(client,key,workflows_key=current_app.config['WORKFLOWS_KEY'])
+      return jsonify(success(f'Workflow {workflow_id} has been deleted'))
+
    flow, repl = restore_workflow(client,key,return_json=True)
    return jsonify(repl)
+
+@service.route('/workflows/<workflow_id>/terminate',methods=['GET'])
+def terminate(workflow_id):
+   client = get_redis()
+   key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+   terminate_workflow(client,key,inprogress_key=current_app.config['INPROGRESS_KEY'])
+   return jsonify(success(f'Workflow {workflow_id} is terminating'))
 
 @service.route('/workflows/<workflow_id>/state',methods=['GET'])
 def get_workflow_state(workflow_id):
@@ -189,6 +206,8 @@ def get_workflow_trace(workflow_id,kind):
    client = get_redis()
    if kind not in ['A','S']:
       return error(f'Unrecognized trace {kind}'), 400
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
    key = 'workflow:'+workflow_id
    response = []
    for tstamp, value in trace_vector(client,key+':'+kind):
