@@ -1,1 +1,12 @@
 
+#workflows .uk-width-expand {
+   width: 80%;
+}
+
+#workflows .uk-accordion-title span {
+   display: inline-block;
+}
+
+#workflows .uk-accordion-title span.status {
+   vertical-align: top;
+}

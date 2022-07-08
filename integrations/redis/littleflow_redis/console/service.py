@@ -2,6 +2,7 @@ import sys
 import importlib.resources
 
 from flask import Flask, request, jsonify, current_app, g, render_template, send_from_directory
+import requests
 
 import littleflow_redis.console
 
@@ -21,3 +22,13 @@ def index():
 @service.route('/assets/<path:path>')
 def assets(path):
    return send_from_directory(assets_dir, path)
+
+@service.route('/service/<path:path>')
+def device_status_proxy(path):
+   url = current_app.config['API']
+   url += path
+   response = requests.get(url)
+   headers = {}
+   if 'Content-Type' in response.headers:
+      headers['Content-Type'] = response.headers['Content-Type']
+   return response.text, response.status_code, headers
