@@ -2,7 +2,7 @@ from .flow import Source, Sink, InvokeTask, InvokeFlow
 
 def graph_name(obj,end=-1):
    if isinstance(obj,InvokeTask):
-      return f'{obj.name}{obj.index}'
+      return f'{obj.name}.{obj.index}'
    elif isinstance(obj,Source):
       return '[*]'
    elif isinstance(obj,Sink):
