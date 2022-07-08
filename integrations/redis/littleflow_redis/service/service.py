@@ -5,7 +5,7 @@ from flasgger import Swagger, swag_from, validate
 import yaml
 import redis
 
-from littleflow_redis import restore_workflow, compute_vector, trace_vector
+from littleflow_redis import restore_workflow, compute_vector, trace_vector, workflow_state
 
 class Config:
    REDIS_SERVICE = '0.0.0.0:6379'
@@ -171,9 +171,15 @@ def get_workflow_state(workflow_id):
    """
    client = get_redis()
    key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+
+   state = workflow_state(client,key)
+   if state is None:
+      state = 'UKNOWN'
    S = compute_vector(client,key+':S')
    A = compute_vector(client,key+':A')
-   return jsonify([S.flatten().tolist(),A.flatten().tolist()])
+   return jsonify({'state':state, 'S':S.flatten().tolist(), 'A': A.flatten().tolist()})
 
 @service.route('/workflows/<workflow_id>/trace/<kind>',methods=['GET'])
 def get_workflow_trace(workflow_id,kind):
