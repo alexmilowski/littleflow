@@ -127,7 +127,8 @@ def workflows():
    start = int(request.args.get('next',0))
    size = int(request.args.get('size',50))
    items = client.lrange(current_app.config['WORKFLOWS_KEY'],start,start+size-1)
-   workflows = [value.decode('UTF-8')[9:] for value in items]
+   convert = lambda x : {'id':x[9:],'status':workflow_state(client,x,default='UNKNOWN')}
+   workflows = [convert(value.decode('UTF-8')) for value in items]
    response =jsonify(workflows)
    if len(items)==size:
       response.headers['Link'] = f'<{request.base_url}?next={start+size}>; rel="next"'
