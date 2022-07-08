@@ -37,7 +37,7 @@ class RemoteTaskContext(FunctionTaskContext):
       starting = context.new_transition()
       starting[invocation.index] = 1
 
-      self._client.connection.sadd(self._key_S,str(tstamp())+':'+str(starting.flatten())[1:-1])
+      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(starting.flatten())[1:-1])
 
 class RedisContext(Context):
    def __init__(self,flow,client,key,workflow_id,state=None,activation=None,cache=None,task_context=None):
@@ -48,12 +48,12 @@ class RedisContext(Context):
 
    def accumulate(self,A):
       if (1*A).sum()>0:
-         self._client.connection.sadd(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
+         self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
 
    def start(self,N):
       super().start(N)
       A = - 1*N * self.T
-      self._client.connection.sadd(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
+      self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
 
    def ended(self,value):
       self._client.append(message({'workflow':self._workflow_id },kind='end-workflow'))
@@ -73,11 +73,14 @@ def restore_workflow(client,key):
 
 def compute_vector(client,key):
    result = None
-   cursor = -1
-   while cursor!=0:
-      response = client.sscan(key,cursor=cursor if cursor>0 else 0,count=20)
-      cursor = response[0]
-      for value in response[1]:
+   current = 0
+   page_size = 20
+   size = -1
+   while size!=0:
+      response = client.lrange(key,current,current+page_size-1)
+      size = len(response)
+      current += page_size
+      for value in response:
          value = value.decode('UTF-8')
          tstamp, _, repl = value.partition(':')
          if result is None:
@@ -136,7 +139,7 @@ class LifecycleListener(EventListener):
       if workflow_id is not None:
          if kind=='start-workflow':
             if self._workflows_key is not None:
-               self.connection.sadd(self._workflows_key,workflow_id)
+               self.connection.lpush(self._workflows_key,workflow_id)
             if self._inprogress_key is not None:
                self.connection.sadd(self._inprogress_key,workflow_id)
          elif kind=='end-workflow':
@@ -179,7 +182,7 @@ class TaskEndListener(EventListener):
       self.append(receipt_for(event_id))
 
       S = -ended
-      self.connection.sadd(key + ':S',str(tstamp())+':'+str(S.flatten())[1:-1])
+      self.connection.lpush(key + ':S',str(tstamp())+':'+str(S.flatten())[1:-1])
 
       runner = Runner()
       while not context.ending.empty():
