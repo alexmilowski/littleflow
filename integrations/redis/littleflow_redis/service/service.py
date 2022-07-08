@@ -1,4 +1,5 @@
 import os
+import io
 
 from flask import Flask, request, jsonify, current_app, g
 from flasgger import Swagger, swag_from, validate
@@ -6,6 +7,7 @@ import yaml
 import redis
 
 from littleflow_redis import restore_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow
+from littleflow import graph
 
 class Config:
    REDIS_SERVICE = '0.0.0.0:6379'
@@ -213,3 +215,14 @@ def get_workflow_trace(workflow_id,kind):
    for tstamp, value in trace_vector(client,key+':'+kind):
       response.append([tstamp,value.flatten().tolist()])
    return jsonify(response)
+
+@service.route('/workflows/<workflow_id>/graph',methods=['GET'])
+def get_workflow_graph(workflow_id):
+   client = get_redis()
+   key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+   flow = restore_workflow(client,key)
+   output = io.StringIO()
+   graph(flow,output,embed_docs=False)
+   return output.getvalue(), 200, {'Content-Type':'text/plain; charset=UTF-8'}
