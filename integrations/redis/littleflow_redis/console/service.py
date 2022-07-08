@@ -1,0 +1,23 @@
+import sys
+import importlib.resources
+
+from flask import Flask, request, jsonify, current_app, g, render_template, send_from_directory
+
+import littleflow_redis.console
+
+assets_dir = str(importlib.resources.path(sys.modules['littleflow_redis.console'],'assets'))
+templates_dir = str(importlib.resources.path(sys.modules['littleflow_redis.console'],'templates'))
+
+class Config:
+   API = 'http://localhost:5000/'
+
+service = Flask('console',template_folder=templates_dir)
+service.config.from_object(Config())
+
+@service.route('/')
+def index():
+   return render_template('index.html')
+
+@service.route('/assets/<path:path>')
+def assets(path):
+   return send_from_directory(assets_dir, path)
