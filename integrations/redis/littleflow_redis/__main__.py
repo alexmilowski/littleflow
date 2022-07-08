@@ -58,6 +58,9 @@ def run(stream,workflow_id,wait,workflow):
    client = EventClient(stream,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
    run_workflow(workflow_spec,workflow_id,client)
 
+   print_id = workflow_id[9:] if workflow_id.startswith('workflow:') else workflow_id
+   print(f'workflow {print_id} is running')
+
    if wait:
       stopper.join()
 
