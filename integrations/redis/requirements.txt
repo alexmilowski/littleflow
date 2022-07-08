@@ -3,3 +3,4 @@ Flask
 click
 flasgger
 pyyaml
+requests
