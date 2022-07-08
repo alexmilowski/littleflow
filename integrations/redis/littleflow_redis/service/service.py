@@ -207,11 +207,11 @@ def get_workflow_trace(workflow_id,kind):
    ---
    """
    client = get_redis()
+   key = 'workflow:'+workflow_id
    if kind not in ['A','S']:
       return error(f'Unrecognized trace {kind}'), 400
    if client.exists(key)==0:
       return error(f'Workflow {workflow_id} does not exist'), 404
-   key = 'workflow:'+workflow_id
    response = []
    for tstamp, value in trace_vector(client,key+':'+kind):
       response.append([tstamp,value.flatten().tolist()])
