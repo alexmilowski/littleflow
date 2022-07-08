@@ -12,7 +12,7 @@ def run_workflow(workflow,lookup=None,context=None):
    else:
       context.task_context = task_context
 
-   context.start(context.initial)
+   runner.start(context)
 
    while not context.ending.empty():
       runner.next(context,context.ending.get())

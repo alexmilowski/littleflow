@@ -14,12 +14,10 @@ def tstamp():
 
 class RemoteTaskContext(FunctionTaskContext):
 
-   def __init__(self,event_client,workflow_id,key,lookup={}):
+   def __init__(self,event_client,workflow_id,lookup={}):
       super().__init__(lookup)
       self._client = event_client
       self._workflow_id = workflow_id
-      self._key = key
-      self._key_S = self._key + ':S'
 
    def invoke(self,context,invocation,input):
       if invocation.name in self._lookup:
@@ -37,13 +35,13 @@ class RemoteTaskContext(FunctionTaskContext):
       starting = context.new_transition()
       starting[invocation.index] = 1
 
-      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(starting.flatten())[1:-1])
 
 class RedisContext(Context):
    def __init__(self,flow,client,key,workflow_id,state=None,activation=None,cache=None,task_context=None):
       super().__init__(flow,state=state,activation=activation,cache=cache,task_context=task_context,)
       self._client = client
       self._key_A = key + ':A'
+      self._key_S = key + ':S'
       self._workflow_id = workflow_id
 
    def accumulate(self,A):
@@ -51,9 +49,16 @@ class RedisContext(Context):
          self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
 
    def start(self,N):
+      starting = 1*N
+      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(starting.flatten())[1:-1])
       super().start(N)
-      A = - 1*N * self.T
+      A = - starting * self.T
       self._client.connection.lpush(self._key_A,str(tstamp())+':'+str(A.flatten())[1:-1])
+
+   def end(self,N):
+      ending = - 1*N
+      self._client.connection.lpush(self._key_S,str(tstamp())+':'+str(ending.flatten())[1:-1])
+      super().end(N)
 
    def ended(self,value):
       self._client.append(message({'workflow':self._workflow_id },kind='end-workflow'))
@@ -63,13 +68,27 @@ class RedisContext(Context):
 def save_workflow(client,flow,key):
    client.set(key,str(flow))
 
-def restore_workflow(client,key):
+def restore_workflow(client,key,return_json=False):
    value = client.get(key)
    if value is None:
       raise IOError(f'No workflow value at {key}')
    object = json.loads(value.decode('UTF-8'))
    f = Flow(serialized=object)
-   return f
+   return f if not return_json else (f,object)
+
+def trace_vector(client,key):
+   current = 0
+   page_size = 20
+   size = -1
+   while size!=0:
+      response = client.lrange(key,current,current+page_size-1)
+      size = len(response)
+      current += page_size
+      for value in response:
+         value = value.decode('UTF-8')
+         tstamp, _, repl = value.partition(':')
+         result = np.fromstring(repl,dtype=int,sep=' ')
+         yield float(tstamp), result
 
 def compute_vector(client,key):
    result = None
@@ -92,7 +111,7 @@ def compute_vector(client,key):
 
 
 def restore_workflow_state(event_client,key,workflow_id):
-   remote_context = RemoteTaskContext(event_client,workflow_id,key)
+   remote_context = RemoteTaskContext(event_client,workflow_id)
    client = event_client.connection
    flow = restore_workflow(client,key)
    S = compute_vector(client,key+':S')
@@ -114,15 +133,16 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
    redis_client.delete(key+':A')
    redis_client.delete(key+':S')
 
-   remote_context = RemoteTaskContext(event_client,workflow_id,key)
+   remote_context = RemoteTaskContext(event_client,workflow_id)
    context = RedisContext(flow,event_client,key,workflow_id,cache=RedisInputCache(redis_client,key),task_context=remote_context)
 
    save_workflow(redis_client,flow,key)
 
    event_client.append(message({'workflow':workflow_id},kind='start-workflow'))
-   context.start(context.initial)
 
    runner = Runner()
+   runner.start(context)
+
    while not context.ending.empty():
       runner.next(context,context.ending.get())
 
@@ -180,9 +200,6 @@ class TaskEndListener(EventListener):
       ended[index] = 1
       context.ending.put(ended)
       self.append(receipt_for(event_id))
-
-      S = -ended
-      self.connection.lpush(key + ':S',str(tstamp())+':'+str(S.flatten())[1:-1])
 
       runner = Runner()
       while not context.ending.empty():

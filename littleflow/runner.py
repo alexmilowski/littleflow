@@ -101,16 +101,15 @@ class Context:
       self._T = flow.F.sum(axis=0)
       self._T[0] = 1
       self._T = self._T.reshape((self.F.shape[0],1))
-      self._initial = np.zeros((self.F.shape[0],1),dtype=int)
-      self._initial[0] = 1
-      self._initial = self._initial>0
+      # self._initial = np.zeros((self.F.shape[0],1),dtype=int)
+      # self._initial[0] = 1
+      # self._initial = self._initial>0
       # TODO: do we really need to compute S?
       self._S = state if state is not None else np.zeros((self.F.shape[0],1),dtype=int)
-      if state is None:
-         self._S[0] = 1
       self._ends = SimpleQueue()
       self._cache = cache
       self._task_context = task_context
+
 
    @property
    def flow(self):
@@ -119,13 +118,13 @@ class Context:
       """
       return self._flow
 
-   @property
-   def initial(self):
-      """
-      The start vector for the workflow
-      """
-      return self._initial
-
+   # @property
+   # def initial(self):
+   #    """
+   #    The start vector for the workflow
+   #    """
+   #    return self._initial
+   #
    @property
    def F(self):
       """
@@ -234,6 +233,12 @@ class Runner:
    def __init__(self):
       pass
 
+   def start(self,context):
+      context.A[0] = 1
+      context.ending.put(context.new_transition())
+      context.accumulate(context.A)
+
+
    def next(self,context,E):
       """
       Runs the algorithm forward from a vector representing steps that have ended.
@@ -246,7 +251,8 @@ class Runner:
       activations = context.F.T.dot(E)
       context.accumulate(activations)
       context._A = context._A + activations
-      context.end(E>0)
+      if E.sum()>0:
+         context.end(E>0)
       # TODO: should we allow more than zero/one vectorss
       N = context.A >= context.T
       context._A = context.A - 1*N * context.T
