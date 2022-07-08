@@ -214,7 +214,7 @@ def get_workflow_trace(workflow_id,kind):
       return error(f'Workflow {workflow_id} does not exist'), 404
    response = []
    for tstamp, value in trace_vector(client,key+':'+kind):
-      response.append([tstamp,value.flatten().tolist()])
+      response.append([tstamp.isoformat(),value.flatten().tolist()])
    return jsonify(response)
 
 @service.route('/workflows/<workflow_id>/graph',methods=['GET'])
