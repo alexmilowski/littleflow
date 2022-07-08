@@ -10,3 +10,11 @@
 #workflows .uk-accordion-title span.status {
    vertical-align: top;
 }
+
+svg .started rect {
+   fill: rgba(0,100,0,0.5) !important
+}
+
+svg .ended rect {
+   fill: rgba(0,0,100,0.5) !important
+}

@@ -57,8 +57,13 @@ class App {
               this.fetchWorkflowDetails(
                  workflow,
                  () => {
-                    workflow.loaded = true
-                    this.showWorkflowDetails(workflow)
+                    this.fetchWorkflowTrace(
+                       workflow,
+                       () => {
+                          workflow.loaded = true
+                          this.showWorkflowDetails(workflow)
+                       }
+                    );
                  }
               )
            }
@@ -67,15 +72,53 @@ class App {
      }
      console.log(`Loaded ${workflow.id}`)
      $(workflow.item).find(".uk-accordion-content").empty();
-     $(`<div class="mermaid">${workflow.graph}</div>`).appendTo($(workflow.item).find(".uk-accordion-content"))
+     $(`<div class="mermaid">${workflow.graph.mermaid}</div>`).appendTo($(workflow.item).find(".uk-accordion-content"))
      mermaid.init({}, $(workflow.item).find(".uk-accordion-content .mermaid"));
+     // TODO: need a callback from above
+     let self = this;
+     setTimeout(() => {
+        for (let g of $(workflow.item).find('svg .statediagram-state')) {
+           let id = g.getAttribute('id')
+           let parts = id.split('-');
+
+           // Note: This is a bug in mermaid
+           if (parts[1]=='</join></fork>') {
+             g.remove();
+             continue;
+           }
+           let [name,index] = parts[1].split(".")
+           workflow.graph.tasks[name] = {"element" : g, "id":id, "index": parseInt(index)}
+        }
+        self.updateGraphForWorkflow(workflow);
+     },100);
+  }
+
+  updateGraphForWorkflow(workflow) {
+     let tasks = workflow.definition[1]
+     for (let [timestamp,S] of workflow.S) {
+        for (let index in S) {
+           let task = tasks[index]
+           if (task[0]!="InvokeTask") {
+              continue;
+           }
+           let node = workflow.graph.tasks[task[1].name]
+           if (S[index]>0) {
+              node.element.classList.add("started")
+              console.log(`${index} start`)
+           } else if (S[index]<0) {
+              node.element.classList.add("started")
+              node.element.classList.add("ended")
+              console.log(`${index} end`)
+           }
+        }
+     }
   }
 
   fetchWorkflowDetails(workflow,callback) {
      fetch(`service/workflows/${workflow.id}`)
       .then(response => this.responseFilter(response))
       .then(data => {
-         workflow.details = data
+         workflow.definition = data
          setTimeout(callback,1)
       })
       .catch(error => {
@@ -86,7 +129,18 @@ class App {
      fetch(`service/workflows/${workflow.id}/graph`)
       .then(response => response.text())
       .then(data => {
-         workflow.graph = data
+         workflow.graph = { 'mermaid' : data, 'tasks' : {} }
+         setTimeout(callback,1)
+      })
+      .catch(error => {
+         console.log(error);
+      })
+  }
+  fetchWorkflowTrace(workflow,callback) {
+     fetch(`service/workflows/${workflow.id}/trace/S`)
+      .then(response => this.responseFilter(response))
+      .then(data => {
+         workflow.S = data
          setTimeout(callback,1)
       })
       .catch(error => {
