@@ -11,10 +11,10 @@
    vertical-align: top;
 }
 
-svg .started rect {
+svg .statediagram-state.started rect {
    fill: rgba(0,100,0,0.5) !important
 }
 
-svg .ended rect {
+svg .statediagram-state.ended rect {
    fill: rgba(0,0,100,0.5) !important
 }
