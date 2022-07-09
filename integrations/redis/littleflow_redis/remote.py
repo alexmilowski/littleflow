@@ -49,6 +49,7 @@ class RedisContext(Context):
    def __init__(self,flow,client,key,workflow_id,state=None,activation=None,cache=None,task_context=None):
       super().__init__(flow,state=state,activation=activation,cache=cache,task_context=task_context,)
       self._client = client
+      self._key = key
       self._key_A = key + ':A'
       self._key_S = key + ':S'
       self._workflow_id = workflow_id
@@ -58,11 +59,14 @@ class RedisContext(Context):
          self._client.connection.lpush(self._key_A,str(tstamp())+' '+str(A.flatten())[1:-1])
 
    def start(self,N):
+      client = self._client.connection
+      if not is_running(client,self._key):
+         return
       starting = 1*N
-      self._client.connection.lpush(self._key_S,str(tstamp())+' '+str(starting.flatten())[1:-1])
+      client.lpush(self._key_S,str(tstamp())+' '+str(starting.flatten())[1:-1])
       super().start(N)
       A = - starting * self.T
-      self._client.connection.lpush(self._key_A,str(tstamp())+' '+str(A.flatten())[1:-1])
+      client.lpush(self._key_A,str(tstamp())+' '+str(A.flatten())[1:-1])
 
    def end(self,N):
       ending = - 1*N
@@ -88,6 +92,9 @@ def restart_workflow(event_client,key,workflow_id):
       set_workflow_state(client,key,'RUNNING')
       context = load_workflow_state(event_client, key, workflow_id)
       context.start(S)
+      return True
+   else:
+      return False
 
 def restore_workflow(client,key,archive):
    S = object['S']
@@ -146,7 +153,7 @@ def compute_vector(client,key):
             result = np.fromstring(repl,dtype=int,sep=' ')
          else:
             result += np.fromstring(repl,dtype=int,sep=' ')
-   result = result.reshape((result.shape[0],1))
+   result = result.reshape((result.shape[0],1)) if result is not None else None
    return result
 
 
@@ -229,6 +236,8 @@ class TaskEndListener(EventListener):
       workflow_id = event.get('workflow')
       name = event.get('name')
       index = event.get('index')
+      outcome = event.get('status','SUCCESS')
+      ok = outcome=='SUCCESS'
       if workflow_id is None:
          print('The workflow attribute is missing.',file=sys.stderr)
          return False
@@ -238,34 +247,65 @@ class TaskEndListener(EventListener):
       if index is None:
          print('The task index attribute is missing.',file=sys.stderr)
          return False
-      print(f'Workflow {workflow_id} end for task {name} ({index})')
+      if ok:
+         print(f'Workflow {workflow_id} end for task {name} ({index})')
+      else:
+         print(f'Workflow {workflow_id} failure for task {name} ({index})')
       key = self._prefix + workflow_id
-      context = load_workflow_state(self, key, workflow_id)
-      ended = context.new_transition()
-      ended[index] = 1
-      context.ending.put(ended)
+
+      state = workflow_state(self.connection,key)
+
+      if state!='RUNNING':
+         if state=='TERMINATING':
+            print(f'Workflow {workflow_id} has been terminated')
+            state = 'TERMINATED'
+            set_workflow_state(self.connection,key,state)
+            self.append(message({'workflow':workflow_id },kind='terminated-workflow'))
+         elif state=='FAILED':
+            pass
+         elif state=='TERMINATED':
+            pass
+         else:
+            print(f'Workflow {workflow_id}: unable to handle end outcome for state {state}')
+      elif not ok:
+         print(f'Workflow {workflow_id} has failed')
+         state = 'FAILED'
+         set_workflow_state(self.connection,key,state)
+         self.append(message({'workflow':workflow_id },kind='failed-workflow'))
+
+
       self.append(receipt_for(event_id))
 
-      if not is_running(self.connection,workflow_id):
-         print(f'Workflow {workflow_id} has been terminated')
-         state = workflow_state(self.connection,key)
-         if state=='TERMINATING':
-            set_workflow_state(self.connection,key,'TERMINATED')
-            self.append(message({'workflow':workflow_id },kind='terminated-workflow'))
-         return True
+      if ok:
 
-      runner = Runner()
-      while not context.ending.empty():
-         runner.next(context,context.ending.get())
+         context = load_workflow_state(self, key, workflow_id)
+
+         ended = context.new_transition()
+         ended[index] = 1
+
+         context.ending.put(ended)
+
+         runner = Runner()
+         while not context.ending.empty():
+            runner.next(context,context.ending.get())
 
       return True
 
-def terminate_workflow(client,key,inprogress_key=None):
+def terminate_workflow(event_client,key,workflow_id,inprogress_key=None):
+   client = event_client.connection
    if client.exists(key)==0:
       return
-   set_workflow_state(client,key,'TERMINATING')
+   state = workflow_state(client,key)
+   terminated = False
+   if state=='TERMINATING':
+      set_workflow_state(client,key,'TERMINATED')
+      event_client.append(message({'workflow':workflow_id},kind='terminated-workflow'))
+      terminated = True
+   else:
+      set_workflow_state(client,key,'TERMINATING')
    if inprogress_key is not None:
       client.srem(inprogress_key,key)
+   return terminated
 
 def delete_workflow(client,key,workflows_key=None):
    client.delete(key)
