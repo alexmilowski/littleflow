@@ -96,20 +96,24 @@ def restart_workflow(event_client,key,workflow_id):
    else:
       return False
 
-def restore_workflow(client,key,archive):
-   S = object['S']
-   del object['S']
-   A = object['A']
-   del object['A']
-   client.set(key,json.dumps(object))
+def restore_workflow(client,key,archive,workflows_key=None):
+   S = archive['S']
+   del archive['S']
+   A = archive['A']
+   del archive['A']
+   client.set(key,json.dumps(archive))
    skey = key + ':S'
-   started = np.zeros(len(object.T),dtype=int)
+   started = np.zeros(len(archive['T']),dtype=int)
    for tstamp, v in reversed(S):
       started += np.array(v)
       client.lpush(skey,tstamp+' '+' '.join(map(str,v)))
    akey = key + ':A'
    for tstamp, v in reversed(A):
       client.lpush(akey,tstamp+' '+' '.join(map(str,v)))
+   set_workflow_state(client,key,'TERMINATED')
+   if workflows_key is not None:
+      client.lpush(workflows_key,key)
+
 
 
 def save_workflow(client,flow,key):
@@ -197,7 +201,7 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
 class LifecycleListener(EventListener):
 
    def __init__(self,key,group,workflows_key=None,inprogress_key=None,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-workflow','end-workflow','terminated-workflow'],server=server,port=port,username=username,password=password,pool=pool)
+      super().__init__(key,group,select=['start-workflow','end-workflow','terminated-workflow','failed-workflow'],server=server,port=port,username=username,password=password,pool=pool)
       self._workflows_key = workflows_key
       self._inprogress_key = inprogress_key
 
