@@ -72,12 +72,38 @@ class RedisContext(Context):
    def ended(self,value):
       self._client.append(message({'workflow':self._workflow_id },kind='end-workflow'))
 
+def workflow_archive(client,key):
+   value = client.get(key)
+   if value is None:
+      raise IOError(f'No workflow value at {key}')
+   object = json.loads(value.decode('UTF-8'))
+   object['S'] = [ [tstamp.isoformat(),v.flatten().tolist()] for tstamp, v in trace_vector(client,key+':S')]
+   object['A'] = [ [tstamp.isoformat(),v.flatten().tolist()] for tstamp, v in trace_vector(client,key+':A')]
+   return object
+
+def restore_workflow(client,key,workflow_id,archive,restart=False):
+   S = object['S']
+   del object['S']
+   A = object['A']
+   del object['A']
+   client.set(key,json.dumps(object))
+   skey = key + ':S'
+   started = np.zeros(len(object.T),dtype=int)
+   for tstamp, v in reversed(S):
+      started += np.array(v)
+      client.lpush(skey,tstamp+' '+' '.join(map(str,v)))
+   akey = key + ':A'
+   for tstamp, v in reversed(A):
+      client.lpush(akey,tstamp+' '+' '.join(map(str,v)))
+   if restart and started.sum()>0:
+      context = load_workflow_state(self, key, workflow_id)
+      context.start(started)
 
 
 def save_workflow(client,flow,key):
    client.set(key,str(flow))
 
-def restore_workflow(client,key,return_json=False):
+def load_workflow(client,key,return_json=False):
    value = client.get(key)
    if value is None:
       raise IOError(f'No workflow value at {key}')
@@ -119,10 +145,10 @@ def compute_vector(client,key):
    return result
 
 
-def restore_workflow_state(event_client,key,workflow_id):
+def load_workflow_state(event_client,key,workflow_id):
    remote_context = RemoteTaskContext(event_client,workflow_id)
    client = event_client.connection
-   flow = restore_workflow(client,key)
+   flow = load_workflow(client,key)
    S = compute_vector(client,key+':S')
    A = compute_vector(client,key+':A')
    context = RedisContext(flow,event_client,key,workflow_id,state=S,activation=A,cache=RedisInputCache(client,key),task_context=remote_context)
@@ -209,7 +235,7 @@ class TaskEndListener(EventListener):
          return False
       print(f'Workflow {workflow_id} end for task {name} ({index})')
       key = self._prefix + workflow_id
-      context = restore_workflow_state(self, key, workflow_id)
+      context = load_workflow_state(self, key, workflow_id)
       ended = context.new_transition()
       ended[index] = 1
       context.ending.put(ended)

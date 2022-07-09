@@ -175,7 +175,7 @@ class App {
    }
 
    updateGraphForWorkflow(workflow) {
-      let tasks = workflow.definition[1]
+      let tasks = workflow.definition.T
       for (let [timestamp,S] of workflow.S) {
          for (let index in S) {
             let task = tasks[index]
@@ -236,7 +236,7 @@ class App {
       let body = $(table).find('tbody')[0]
       workflow.states_shown = true;
       let rows = [];
-      for (let item of workflow.definition[1]) {
+      for (let item of workflow.definition.T) {
          let name = ""
          if (item[0]=='InvokeTask') {
             name = item[1].name

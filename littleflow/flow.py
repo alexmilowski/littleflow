@@ -41,8 +41,8 @@ class Flow:
          self._F = np.zeros((size,size),dtype=int)
          self._tasks = [None]*size
       else:
-         self._F = np.array(serialized[0])
-         self._tasks = [Flow.__classes[T[0]](**T[1]) for T in serialized[1]]
+         self._F = np.array(serialized['F'])
+         self._tasks = [Flow.__classes[T[0]](**T[1]) for T in serialized['T']]
 
    @property
    def F(self):
@@ -61,8 +61,8 @@ class Flow:
       return json.dumps(self.save())
 
    def save(self):
-      R = [
-         self._F.tolist(),
-         [[T.__class__.__name__,T.__dict__] for T in self._tasks]
-      ]
+      R = {
+         'F' : self._F.tolist(),
+         'T' : [[T.__class__.__name__,T.__dict__] for T in self._tasks]
+      }
       return R

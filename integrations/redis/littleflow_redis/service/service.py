@@ -6,7 +6,7 @@ from flasgger import Swagger, swag_from, validate
 import yaml
 import redis
 
-from littleflow_redis import restore_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow
+from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow
 from littleflow import graph
 
 class Config:
@@ -172,7 +172,7 @@ def get_workflow(workflow_id):
       delete_workflow(client,key,workflows_key=current_app.config['WORKFLOWS_KEY'])
       return jsonify(success(f'Workflow {workflow_id} has been deleted'))
 
-   flow, repl = restore_workflow(client,key,return_json=True)
+   flow, repl = load_workflow(client,key,return_json=True)
    return jsonify(repl)
 
 @service.route('/workflows/<workflow_id>/terminate',methods=['GET'])
@@ -223,7 +223,11 @@ def get_workflow_graph(workflow_id):
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
       return error(f'Workflow {workflow_id} does not exist'), 404
-   flow = restore_workflow(client,key)
+   flow = load_workflow(client,key)
    output = io.StringIO()
    graph(flow,output,embed_docs=False)
    return output.getvalue(), 200, {'Content-Type':'text/plain; charset=UTF-8'}
+
+@service.route('/workflows/<workflow_id>/save',methods=['POST'])
+def save_workflow(workflow_id):
+   bucket = request.json['bucket']
