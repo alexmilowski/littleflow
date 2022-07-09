@@ -87,14 +87,6 @@ class App {
       }
       console.log(`Loaded ${workflow.id} ${workflow.state}`)
       $(workflow.item).find(".state").empty().text(workflow.state);
-      // setTimeout(() => {
-      //    this.fetchWorkflowStatus(
-      //       workflow,
-      //       () => {
-      //          $(workflow.item).find(".state").empty().text(workflow.state);
-      //       }
-      //    );
-      // },10)
       $(workflow.item).find(".uk-accordion-content").empty();
       let content = $(workflow.item).find(".uk-accordion-content");
       let nav_html = '<ul class="uk-iconnav">'
