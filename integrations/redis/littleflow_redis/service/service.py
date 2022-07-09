@@ -1,6 +1,7 @@
 import os
 import io
 import json
+from uuid import uuid4
 
 from flask import Flask, request, jsonify, current_app, g
 from flasgger import Swagger, swag_from, validate
@@ -12,7 +13,7 @@ from botocore.exceptions import ClientError
 # only needed for restarting
 from rqse import EventClient
 
-from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow
+from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow
 from littleflow import graph
 
 class Config:
@@ -303,3 +304,53 @@ def service_restart_workflow(workflow_id):
       return success(f'Restarted workflow {workflow_id}')
    else:
       return error(f'Restarting workflow {workflow_id} had no tasks to resume'), 400
+
+@service.route('/workflows/restore',methods=['GET','POST'])
+def restore_workflow_from_archive():
+   if request.method=='GET':
+      workflow_id = request.args.get('workflow')
+      uri = request.args.get('uri')
+      archive = None
+      if uri is None:
+         return error(f'The uri parameter is missing'), 400
+   elif request.method=='POST':
+      workflow_id = request.args.get('workflow')
+      uri = request.json.get('uri')
+      archive = request.json if uri is None else None
+
+   if workflow_id is not None:
+      if client.exists('workflow:'+key)==1:
+         return error(f'Workflow {workflow_id} already exists'), 400
+   else:
+      workflow_id = str(uuid4())
+
+   if uri is not None and not uri.startswith('s3://'):
+      return error(f'Only S3 URIs are currently supported'), 400
+
+   if uri is not None:
+      try:
+         bucket, _, path = uri[5:].partition('/')
+         s3 = boto3.client('s3')
+         obj = s3.get_object(Bucket=bucket, Key=path)
+         try:
+            archive = json.loads(obj['Body'].read())
+         except IOError as ex:
+            return error(f'Error reading archive: {ex}'), 400
+      except ClientError as ex:
+         return error(f'Error accessing bucket: {ex}'), 400
+
+   # quick check of archive:
+   if type(archive)!=dict:
+      return error(f'Archive type is not an object: {type(dict)}'), 400
+
+   for key in ['F','T','A','S']:
+      if key not in archive:
+         return error(f'Archive is missing key {key}'), 400
+
+   key = 'workflow:'+workflow_id
+
+   event_client = get_event_client()
+
+   restore_workflow(event_client.connection,key,archive,workflows_key=current_app.config['WORKFLOWS_KEY'])
+
+   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
