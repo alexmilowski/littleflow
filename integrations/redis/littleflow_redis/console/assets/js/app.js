@@ -91,9 +91,11 @@ class App {
       let content = $(workflow.item).find(".uk-accordion-content");
       let nav_html = '<ul class="uk-iconnav">'
       let icons = [["info","show states"],["refresh","refresh workflow"],["download","download workflow state"],["copy","copy workflow state"]]
-      if (workflow.state=='TERMINATED') {
+      if (workflow.state=='TERMINATED' || workflow.state=='FAILED') {
          icons.push(["play","resume workflow"]);
          icons.push(["trash","delete workflow"]);
+      } else if (workflow.state=='TERMINATING') {
+         icons.push(["ban","stop workflow"]);
       } else if (workflow.state=='RUNNING') {
          icons.push(["ban","stop workflow"]);
       } else if (workflow.state=='FINISHED') {
@@ -314,7 +316,7 @@ class App {
    }
 
    terminateWorkflow(workflow) {
-      fetch(`service/workflows/${workflow.id}/terminate`)
+      fetch(`service/workflows/${workflow.id}/terminate`,{method:'POST',body:JSON.stringify({}),headers: {'Content-Type': 'application/json'}})
        .then(response => this.responseFilter(response))
        .then(data => {
           workflow.loaded = false;
