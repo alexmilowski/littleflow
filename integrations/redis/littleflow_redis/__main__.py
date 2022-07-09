@@ -1,8 +1,10 @@
+import sys
 import os
 from uuid import uuid4
 import threading
 from time import sleep
 from random import random
+import signal
 
 import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
@@ -86,12 +88,30 @@ def worker(stream,workflows,inprogress):
    assert end_listener.established
 
    recorder = LifecycleListener(stream,'lifecycle',workflows_key=workflows,inprogress_key=inprogress)
+
+   interrupt_count = 0
+   def interrupt_handler(signum,frame):
+      nonlocal interrupt_count
+      interrupt_count += 1
+      if interrupt_count>1:
+         print('Okay then, attempting exit!')
+         sys.exit(1)
+
+      end_listener.stop()
+      recorder.stop()
+      print(f'Received interrupt, shutting down (may take {end_listener.wait}s)',flush=True)
+
+   signal.signal(signal.SIGINT, interrupt_handler)
+
    recorder.listen()
 
 @cli.command('simulate')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
 @click.option('--wait-period',help='The amount of time to wait',default=3,type=int)
-def simulate(stream,wait_period):
+@click.option('--failures',help='The percent of failures',default=0.0,type=float)
+def simulate(stream,wait_period,failures):
+
+   failures = failures / 100.0
 
    class RandomWait(TaskStartListener):
 
@@ -100,10 +120,18 @@ def simulate(stream,wait_period):
          name = event.get('name')
          index = event.get('index')
          self.append(receipt_for(event_id))
-         wait = round(random()*wait_period,3)
-         print(f'Workflow {workflow_id} start task {name} ({index}), waiting {wait}s')
-         sleep(wait)
          event = {'name':name,'index':index,'workflow':workflow_id}
+         failure_check = random()
+         if failure_check<failures:
+            print(f'Workflow {workflow_id} start task {name} ({index}), failure [{failure_check}<{failures}]')
+            event['status'] = 'FAILURE'
+            self.append(message(event,kind='end-task'))
+            return True
+
+         wait = round(random()*wait_period,3)
+         print(f'Workflow {workflow_id} start task {name} ({index}), waiting {wait}s ({failure_check})')
+         sleep(wait)
+         event['status'] = 'SUCCESS'
          self.append(message(event,kind='end-task'))
 
          return True
