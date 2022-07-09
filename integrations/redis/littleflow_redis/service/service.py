@@ -190,14 +190,19 @@ def get_workflow(workflow_id):
    flow, repl = load_workflow(client,key,return_json=True)
    return jsonify(repl)
 
-@service.route('/workflows/<workflow_id>/terminate',methods=['GET'])
+@service.route('/workflows/<workflow_id>/terminate',methods=['POST'])
 def terminate(workflow_id):
-   client = get_redis()
+   event_client = get_event_client()
    key = 'workflow:'+workflow_id
-   if client.exists(key)==0:
+   if event_client.connection.exists(key)==0:
       return error(f'Workflow {workflow_id} does not exist'), 404
-   terminate_workflow(client,key,inprogress_key=current_app.config['INPROGRESS_KEY'])
-   return jsonify(success(f'Workflow {workflow_id} is terminating'))
+   terminated = terminate_workflow(event_client,key,workflow_id,inprogress_key=current_app.config['INPROGRESS_KEY'])
+   return jsonify(success(f'Workflow {workflow_id} is {"terminated" if terminated else "terminating"}'))
+
+@service.route('/workflows/terminate',methods=['POST'])
+def terminate_request():
+   workflow_id = request.json.get('workflow')
+   return terminate(workflow_id)
 
 @service.route('/workflows/<workflow_id>/state',methods=['GET'])
 def get_workflow_state(workflow_id):
@@ -214,7 +219,7 @@ def get_workflow_state(workflow_id):
       state = 'UKNOWN'
    S = compute_vector(client,key+':S')
    A = compute_vector(client,key+':A')
-   return jsonify({'state':state, 'S':S.flatten().tolist(), 'A': A.flatten().tolist()})
+   return jsonify({'state':state, 'S':S.flatten().tolist() if S is not None else [], 'A': A.flatten().tolist() if A is not None else []})
 
 @service.route('/workflows/<workflow_id>/trace/<kind>',methods=['GET'])
 def get_workflow_trace(workflow_id,kind):
@@ -289,9 +294,12 @@ def service_restart_workflow(workflow_id):
    if client.exists(key)==0:
       return error(f'Workflow {workflow_id} does not exist'), 404
    state = workflow_state(client,key)
-   if state!='TERMINATED':
+   if state!='TERMINATED' and state!='FAILED':
       return error(f'Workflow {workflow_id} cannot be restarted from current state {state}'), 400
 
-   restart_workflow(get_event_client(),key,key)
+   started = restart_workflow(get_event_client(),key,key)
 
-   return success(f'Restarted workflow {workflow_id}')
+   if started:
+      return success(f'Restarted workflow {workflow_id}')
+   else:
+      return error(f'Restarting workflow {workflow_id} had no tasks to resume'), 400
