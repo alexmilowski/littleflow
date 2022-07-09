@@ -1,6 +1,5 @@
 import sys
 import os
-from uuid import uuid4
 import threading
 from time import sleep
 from random import random
@@ -25,9 +24,6 @@ def cli():
 @click.option('--wait',is_flag=True)
 @click.argument('workflow')
 def run(stream,workflow_id,wait,workflow):
-
-   if workflow_id is None:
-      workflow_id = 'workflow:'+str(uuid4())
 
    with open(workflow,'r') as data:
       workflow_spec = data.read()
@@ -58,7 +54,7 @@ def run(stream,workflow_id,wait,workflow):
 
    # run the workflow
    client = EventClient(stream,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
-   run_workflow(workflow_spec,workflow_id,client)
+   workflow_id = run_workflow(workflow_spec,client,workflow_id=workflow_id)
 
    print_id = workflow_id[9:] if workflow_id.startswith('workflow:') else workflow_id
    print(f'workflow {print_id} is running')

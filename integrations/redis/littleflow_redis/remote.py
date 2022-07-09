@@ -1,6 +1,8 @@
 import sys
 from datetime import datetime, timezone
 import json
+from uuid import uuid4
+
 
 import numpy as np
 from littleflow import Parser, Compiler, Runner, Context, FunctionTaskContext, Flow
@@ -170,11 +172,14 @@ def load_workflow_state(event_client,key,workflow_id):
    context = RedisContext(flow,event_client,key,workflow_id,state=S,activation=A,cache=RedisInputCache(client,key),task_context=remote_context)
    return context
 
-def run_workflow(workflow,workflow_id,event_client,prefix=''):
+def run_workflow(workflow,event_client,workflow_id=None,prefix=''):
    p = Parser()
    c = Compiler()
    model = p.parse(workflow)
    flow = c.compile(model)
+
+   if workflow_id is None:
+      workflow_id = f'workflow:{flow.name+"-" if flow.name is not None else ""}{str(uuid4())}'
 
    key = prefix + workflow_id
 
@@ -197,6 +202,8 @@ def run_workflow(workflow,workflow_id,event_client,prefix=''):
 
    while not context.ending.empty():
       runner.next(context,context.ending.get())
+
+   return workflow_id
 
 class LifecycleListener(EventListener):
 
