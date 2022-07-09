@@ -4,6 +4,22 @@ class App {
       this.workflows = {}
    }
    init() {
+      for (let link of $("#main-nav a")) {
+         let href = $(link).attr('href');
+         if (href=='#refresh') {
+            $(link).click(() => {
+               $("#workflows").empty();
+               this.workflows = {}
+               // TODO: add pagination
+               this.fetchWorkflows(0,50);
+            });
+         } else if (href=='#restore') {
+            $(link).click(() => {
+               this.promptRestoreWorkflow();
+            });
+         }
+
+      }
       // TODO: add pagination
       this.fetchWorkflows(0,50)
    }
@@ -114,18 +130,17 @@ class App {
       let self = this;
       for (let link of $(nav).find('a')) {
          let href = $(link).attr('href');
-         console.log(href)
          if (href=='#download') {
             $(link).attr('href',`service/workflows/${workflow.id}/archive`)
             $(link).attr('target',`${workflow.id}.json`)
-            continue
-         }
-         $(link).click(() => {
-            if (href=='#refresh') {
+         } else if (href=='#refresh') {
+            $(link).click(() => {
                workflow.loaded = false;
                workflow.shown = false;
                this.showWorkflowDetails(workflow);
-            } else if (href=='#info') {
+            });
+         } else if (href=='#info') {
+            $(link).click(() => {
                if (workflow.states_shown) {
                   let content = $(workflow.item).find(".uk-accordion-content");
                   $(content).find("table").remove();
@@ -135,24 +150,34 @@ class App {
                   this.showWorkflowTaskDetails(workflow);
                   $(link).attr("title","hide states")
                }
-            } else if (href=='#play') {
+            });
+         } else if (href=='#play') {
+            $(link).click(() => {
                UIkit.modal.confirm(`Are you sure you want to restart workflow ${workflow.id}`).then(() => {
                   this.restartWorkflow(workflow);
                });
-            } else if (href=='#copy') {
+            });
+         } else if (href=='#copy') {
+            $(link).click(() => {
                UIkit.modal.prompt('S3 URI:', 's3://yourbucket/path').then((uri) => {
-                  this.archiveWorkflow(workflow,uri)
+                  if (uri!=null) {
+                     this.archiveWorkflow(workflow,uri)
+                  }
                });
-            } else if (href=='#ban') {
+            });
+         } else if (href=='#ban') {
+            $(link).click(() => {
                UIkit.modal.confirm(`Are you sure you want to stop workflow ${workflow.id}`).then(() => {
                   this.terminateWorkflow(workflow);
                });
-            } else if (href=='#trash') {
+            });
+         } else if (href=='#trash') {
+            $(link).click(() => {
                UIkit.modal.confirm(`Are you sure you want to delete workflow ${workflow.id}`).then(() => {
                   this.deleteWorkflow(workflow);
                });
-            }
-         })
+            });
+         }
       }
       if (workflow.states_shown) {
          workflow.states_shown = false
@@ -272,6 +297,10 @@ class App {
             }
          }
       }
+
+   }
+
+   promptRestoreWorkflow() {
 
    }
 
