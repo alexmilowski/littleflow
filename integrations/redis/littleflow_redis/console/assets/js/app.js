@@ -15,7 +15,11 @@ class App {
             });
          } else if (href=='#restore') {
             $(link).click(() => {
-               this.promptRestoreWorkflow();
+               UIkit.modal.prompt('Restore workflow from S3 URI:', 's3://yourbucket/path').then((uri) => {
+                  if (uri!=null) {
+                     this.restoreWorkflow(uri)
+                  }
+               });
             });
          }
 
@@ -52,24 +56,32 @@ class App {
 
    addWorkflows(data) {
       for (let workflow of data) {
-         let exists = this.workflows[workflow.id] != null;
-         this.workflows[workflow.id] = workflow
-         if (exists) {
-            // TODO: update UI
-         } else {
-            let item = $(`<li><a class="uk-accordion-title" href="#"><span class="uk-width-expand" uk-leader>${workflow.id}</span><span class='state'>${workflow.state}</span></a><div class="uk-accordion-content"><div uk-spinner></div></div></li>`).appendTo("#workflows");
-            workflow.item = item;
-            workflow.loaded = false;
-            workflow.shown = false;
-            workflow.states_shown = false
-            $(item)
-              .find("a")
-              .click(() => {
-                 this.showWorkflowDetails(workflow);
-              });
-
-         }
+         this.addWorkflow(workflow,true)
       }
+   }
+
+   addWorkflow(workflow,append) {
+      console.log(`Adding ${workflow.id} ${workflow.state}`)
+      let exists = this.workflows[workflow.id] != null;
+      this.workflows[workflow.id] = workflow
+      if (exists) {
+         return;
+      }
+      let item = $(`<li><a class="uk-accordion-title" href="#"><span class="uk-width-expand" uk-leader>${workflow.id}</span><span class='state'>${workflow.state}</span></a><div class="uk-accordion-content"><div uk-spinner></div></div></li>`);
+      if (append) {
+         $(item).appendTo("#workflows")
+      } else {
+         $(item).prependTo("#workflows")
+      }
+      workflow.item = item;
+      workflow.loaded = false;
+      workflow.shown = false;
+      workflow.states_shown = false
+      $(item)
+        .find("a")
+        .click(() => {
+           this.showWorkflowDetails(workflow);
+        });
    }
 
    showWorkflowDetails(workflow) {
@@ -159,7 +171,7 @@ class App {
             });
          } else if (href=='#copy') {
             $(link).click(() => {
-               UIkit.modal.prompt('S3 URI:', 's3://yourbucket/path').then((uri) => {
+               UIkit.modal.prompt('Archive workflow to S3 URI:', 's3://yourbucket/path').then((uri) => {
                   if (uri!=null) {
                      this.archiveWorkflow(workflow,uri)
                   }
@@ -300,10 +312,6 @@ class App {
 
    }
 
-   promptRestoreWorkflow() {
-
-   }
-
    archiveWorkflow(workflow,uri) {
       let data = { uri: uri };
       fetch(`service/workflows/${workflow.id}/archive`,{method:'POST',body:JSON.stringify(data),headers: {'Content-Type': 'application/json'}})
@@ -316,6 +324,27 @@ class App {
           if (error.status==400) {
              error.response.json().then(data => {
                 UIkit.modal.alert(`Cannot archive workflow ${workflow.id} archived to ${uri}\n due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
+       })
+   }
+
+   restoreWorkflow(uri) {
+      let data = { uri: uri };
+      fetch(`service/workflows/restore`,{method:'POST',body:JSON.stringify(data),headers: {'Content-Type': 'application/json'}})
+       .then(response => this.responseFilter(response))
+       .then(data => {
+          let workflow = {id: data.workflow}
+          this.fetchWorkflowStatus(workflow,() => {
+             this.addWorkflow(workflow,false)
+          });
+       })
+       .catch(error => {
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot restore workflow from ${uri}\n due to: ${data.message}`);
              });
           } else {
              console.log(error);
