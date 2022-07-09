@@ -1,3 +1,5 @@
+@flow subflow
+
 A → {
   B → C
   D
