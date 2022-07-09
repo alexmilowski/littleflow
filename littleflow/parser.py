@@ -3,10 +3,10 @@ from lark import Lark, Token, Tree
 from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
 
 grammar = r"""
-flow: doc_comment? (declaration | flow_statement)+
-declaration: ARROW NAME parameter_literal? doc_comment? ";"?
+flow: (declaration | flow_statement)+
+declaration: DECLARE NAME parameter_literal? doc_comment? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
-step: LABEL? STAR? (task_list | subflow | conditional) LABEL?
+step: LABEL? (STAR | MERGE)? (task_list | subflow | conditional) LABEL?
 task_list : task (OR task)*
 task: NAME parameter_literal?
 subflow: "{" flow_statement+ "}"
@@ -28,6 +28,8 @@ doc_comment: "'''" DOC_COMMENT_BODY_SINGLE? "'''" | "\"\"\"" DOC_COMMENT_BODY_DO
 ARROW: "→" | "->"
 STAR: "*"
 OR: "|"
+MERGE: ">"
+DECLARE: "@" NAME
 LABEL: ":" NAME
 NAME: /[a-zA-Z_]\w*/
 DEC_NUMBER: /0|[1-9][\d_]*/i
@@ -247,11 +249,15 @@ class Parser:
          elif item.data=='doc_comment':
             subject.doc = item.children[0].value
          elif item.data=='declaration':
-            decl = Declaration(item.children[1].value)
-            if decl.name in workflow.declarations:
+            kind = item.children[0].value[1:]
+            decl = Declaration(kind,item.children[1].value)
+            if kind=='flow':
+               workflow.name = decl.name
+            key = (kind,decl.name)
+            if key in workflow.declarations:
                # warning needed, last one wins
                pass
-            workflow.declarations[decl.name] = decl
+            workflow.declarations[key] = decl
             subject = decl
          else:
             line = item.data.line

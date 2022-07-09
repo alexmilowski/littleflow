@@ -1,18 +1,19 @@
+@flow documented
 '''
 This is an example of a documented workflow
 '''
 
-→ get_basket
+@task get_basket
 '''
 Pickup a basket
 '''
 
-→ pick
+@task pick
 '''
 Pick fruit
 '''
 
-→ eat
+@task eat
 '''
 Yum!
 '''

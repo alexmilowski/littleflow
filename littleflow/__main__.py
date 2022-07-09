@@ -24,6 +24,8 @@ def compile(files):
             model = p.parse(input)
             print(model)
             flow = c.compile(model)
+            if flow.name is not None:
+               print(flow.name)
             print(flow.F)
 
       except FileNotFoundError as ex:

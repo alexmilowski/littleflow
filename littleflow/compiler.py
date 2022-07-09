@@ -47,18 +47,36 @@ class Compiler:
 
       size = len(model.indexed)
       assert size>2, 'The workflow contains now flows.'
-      flow = Flow(size)
+      flow = Flow(size,name=model.name)
 
       for index, step in enumerate(model.indexed):
          if isinstance(step,Task):
+            decl = model.declarations.get(('task',step.name))
             value = {}
+            if decl is not None:
+               if decl.parameters is not None:
+                  try:
+                     value = compile_literal(decl.parameters.value,decl.parameters.type)
+                  except ValueError as ex:
+                     raise ValueError(f'{decl.parameters.line}:{decl.parameters.column} {ex}')
             if step.parameters is not None:
                try:
-                  value = compile_literal(step.parameters.value,step.parameters.type)
+                  invocation_value = compile_literal(step.parameters.value,step.parameters.type)
+                  if len(value)==0:
+                     value = invocation_value
+                  elif type(value)!=type(invocation_value):
+                     raise ValueError(f'{step.parameters.line}:{step.parameters.column} the type of the declaration parameters ({type(value)}) does not match the type of the invocation parameters ({type(invocation_value)})')
+                  elif type(value)==list:
+                     value = invocation_value
+                  elif type(value)==dict:
+                     for key, value in invocation_value.items():
+                        value[key] = value
+                  else:
+                     value = invocation_value
+
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
             flow[index] = InvokeTask(index,step.name,value)
-            decl = model.declarations.get(step.name)
             if decl is not None:
                flow[index].doc = decl.doc
          elif isinstance(step,LiteralSource):

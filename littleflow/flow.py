@@ -35,7 +35,8 @@ class Flow:
       'InvokeFlow' : InvokeFlow
    }
 
-   def __init__(self,size=0,serialized=None):
+   def __init__(self,size=0,serialized=None,name=None):
+      self._name = name
       if serialized is None:
          assert size>0
          self._F = np.zeros((size,size),dtype=int)
@@ -43,6 +44,14 @@ class Flow:
       else:
          self._F = np.array(serialized['F'])
          self._tasks = [Flow.__classes[T[0]](**T[1]) for T in serialized['T']]
+
+   @property
+   def name(self):
+      return self._name
+
+   @name.setter
+   def name(self,value):
+      self._name = value
 
    @property
    def F(self):

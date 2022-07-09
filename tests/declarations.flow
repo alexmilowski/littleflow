@@ -1,8 +1,10 @@
+# This is the declaration for this flow
+@flow declarations ({ "something" : "default_input"})
 '''
 This is the main documentation for the flow
 '''
 
-→ A ({ "something" : "default_value"})
+@task A ({ "something" : "default_value"})
 '''
 Documentation for A
 '''

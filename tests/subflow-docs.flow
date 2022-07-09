@@ -1,8 +1,8 @@
-→ A '''Task A'''
-→ B '''Task B'''
-→ C '''Task C'''
-→ D '''Task D'''
-→ E '''Task E'''
+@task A '''Task A'''
+@task B '''Task B'''
+@task C '''Task C'''
+@task D '''Task D'''
+@task E '''Task E'''
 
 A → {
   B → C

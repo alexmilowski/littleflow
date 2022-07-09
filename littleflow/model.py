@@ -82,12 +82,14 @@ class SubFlow(Step):
 
 @dataclass
 class Declaration:
+   kind : str
    name : str
    doc : str = None
    parameters : ParameterLiteral = None
 
 @dataclass
 class Workflow:
+   name : str = None
    indexed : list[Step] = field(default_factory=list)
    flows : list[SubFlow] = field(default_factory=list)
    declarations : dict = field(default_factory=dict)
