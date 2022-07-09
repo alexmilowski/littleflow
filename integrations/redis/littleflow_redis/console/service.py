@@ -32,8 +32,13 @@ def device_status_proxy(path):
    elif request.method=='DELETE':
       response = requests.delete(url)
    elif request.method=='POST':
-      response = requests.post(url,data=request.json,headers={'Content-Type':request.headers['Content-Type']})
+      headers = {'Content-Type':request.headers['Content-Type']}
+      if 'Content-Length' in request.headers:
+         headers['Content-Legth'] = request.headers['Content-Length']
+      response = requests.post(url,data=request.data,headers=headers)
    headers = {}
    if 'Content-Type' in response.headers:
       headers['Content-Type'] = response.headers['Content-Type']
+   if 'Content-Disposition' in response.headers:
+      headers['Content-Disposition'] = response.headers['Content-Disposition']
    return response.text, response.status_code, headers

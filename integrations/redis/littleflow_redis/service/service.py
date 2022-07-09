@@ -1,16 +1,23 @@
 import os
 import io
+import json
 
 from flask import Flask, request, jsonify, current_app, g
 from flasgger import Swagger, swag_from, validate
 import yaml
 import redis
+import boto3
+from botocore.exceptions import ClientError
 
-from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow
+# only needed for restarting
+from rqse import EventClient
+
+from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow
 from littleflow import graph
 
 class Config:
    REDIS_SERVICE = '0.0.0.0:6379'
+   WORKFLOWS_STREAM = 'workflows:run'
    WORKFLOWS_KEY = 'workflows:all'
    INPROGRESS_KEY = 'workflows:inprogress'
 
@@ -40,7 +47,7 @@ definitions:
 """
 defs = yaml.load(swag_def,Loader=yaml.Loader)
 
-def get_redis():
+def get_pool():
    if 'pool' not in g:
       service_spec = current_app.config.get('REDIS_SERVICE')
       if service_spec is None:
@@ -63,11 +70,19 @@ def get_redis():
             username = 'default'
 
       g.pool = redis.ConnectionPool(host=host,port=port,username=username,password=password)
+   return g.pool
+
+def get_redis():
 
    if 'redis' not in g:
-      g.redis = redis.Redis(connection_pool=g.pool)
+      g.redis = redis.Redis(connection_pool=get_pool())
 
    return g.redis
+
+def get_event_client():
+   if 'event_client' not in g:
+      g.event_client = EventClient(current_app.config['WORKFLOWS_STREAM'],pool=get_pool())
+   return g.event_client
 
 def message_response(status,message=None,data=None):
    msg = data.copy() if data is not None else {}
@@ -228,6 +243,55 @@ def get_workflow_graph(workflow_id):
    graph(flow,output,embed_docs=False)
    return output.getvalue(), 200, {'Content-Type':'text/plain; charset=UTF-8'}
 
-@service.route('/workflows/<workflow_id>/save',methods=['POST'])
-def save_workflow(workflow_id):
-   bucket = request.json['bucket']
+@service.route('/workflows/<workflow_id>/archive',methods=['GET','POST'])
+def archive_workflow(workflow_id):
+   client = get_redis()
+   key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+   object = workflow_archive(client,key)
+
+   if request.method=='GET':
+      return jsonify(object), {'Content-Disposition': f'attachment; filename={workflow_id}.json;'}
+
+   data =  request.json
+   bucket = data.get('bucket')
+   uri = data.get('uri')
+   if uri is not None:
+      if not uri.startswith('s3://'):
+         return error('Malformed s3 uri: '+uri), 400
+      uri = uri[5:]
+      bucket, _, path = uri.partition('/')
+      if len(path)==0:
+         path = workflow_id + '.json'
+   elif bucket is None:
+      return error('The uri or bucket must be specified.'), 400
+   else:
+      path = workflow_id + '.json'
+
+   repl = json.dumps(object)
+   try:
+      s3 = boto3.client('s3')
+      s3.put_object(Bucket=bucket,Key=path,Body=repl.encode('UTF-8'))
+
+      result_uri = f's3://{bucket}/{path}'
+
+      response = jsonify(success('Archive created',{'uri':result_uri}))
+      response.headers['Location'] = result_uri
+      return response
+   except ClientError as ex:
+      return error('Error accessing bucket: '+str(ex)), 400
+
+@service.route('/workflows/<workflow_id>/restart',methods=['GET'])
+def service_restart_workflow(workflow_id):
+   client = get_redis()
+   key = 'workflow:'+workflow_id
+   if client.exists(key)==0:
+      return error(f'Workflow {workflow_id} does not exist'), 404
+   state = workflow_state(client,key)
+   if state!='TERMINATED':
+      return error(f'Workflow {workflow_id} cannot be restarted from current state {state}'), 400
+
+   restart_workflow(get_event_client(),key,key)
+
+   return success(f'Restarted workflow {workflow_id}')

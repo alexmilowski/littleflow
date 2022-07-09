@@ -4,3 +4,4 @@ click
 flasgger
 pyyaml
 requests
+boto3

@@ -81,7 +81,15 @@ def workflow_archive(client,key):
    object['A'] = [ [tstamp.isoformat(),v.flatten().tolist()] for tstamp, v in trace_vector(client,key+':A')]
    return object
 
-def restore_workflow(client,key,workflow_id,archive,restart=False):
+def restart_workflow(event_client,key,workflow_id):
+   client = event_client.connection
+   S = compute_vector(client,key+':S')
+   if S.sum()>0:
+      set_workflow_state(client,key,'RUNNING')
+      context = load_workflow_state(event_client, key, workflow_id)
+      context.start(S)
+
+def restore_workflow(client,key,archive):
    S = object['S']
    del object['S']
    A = object['A']
@@ -95,9 +103,6 @@ def restore_workflow(client,key,workflow_id,archive,restart=False):
    akey = key + ':A'
    for tstamp, v in reversed(A):
       client.lpush(akey,tstamp+' '+' '.join(map(str,v)))
-   if restart and started.sum()>0:
-      context = load_workflow_state(self, key, workflow_id)
-      context.start(started)
 
 
 def save_workflow(client,flow,key):

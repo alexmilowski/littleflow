@@ -13,6 +13,11 @@ class App {
          // Setup auth
          //setTimeout(() => { this.relogin(); },10);
          return null
+      } else if (!response.ok) {
+         let err = new Error("HTTP error: "+ response.status)
+         err.response = response
+         err.status = response.status
+         throw err
       } else {
          return response.json()
       }
@@ -62,8 +67,13 @@ class App {
                      this.fetchWorkflowTrace(
                         workflow,
                         () => {
-                           workflow.loaded = true
-                           this.showWorkflowDetails(workflow)
+                           this.fetchWorkflowStatus(
+                              workflow,
+                              () => {
+                                 workflow.loaded = true
+                                 this.showWorkflowDetails(workflow)
+                              }
+                           );
                         }
                      );
                   }
@@ -75,19 +85,20 @@ class App {
       if (workflow.shown) {
          return;
       }
-      console.log(`Loaded ${workflow.id}`)
-      setTimeout(() => {
-         this.fetchWorkflowStatus(
-            workflow,
-            () => {
-               $(workflow.item).find(".state").empty().text(workflow.state);
-            }
-         );
-      },10)
+      console.log(`Loaded ${workflow.id} ${workflow.state}`)
+      $(workflow.item).find(".state").empty().text(workflow.state);
+      // setTimeout(() => {
+      //    this.fetchWorkflowStatus(
+      //       workflow,
+      //       () => {
+      //          $(workflow.item).find(".state").empty().text(workflow.state);
+      //       }
+      //    );
+      // },10)
       $(workflow.item).find(".uk-accordion-content").empty();
       let content = $(workflow.item).find(".uk-accordion-content");
       let nav_html = '<ul class="uk-iconnav">'
-      let icons = [["info","show states"],["refresh","refresh workflow"],["copy","copy workflow state"]]
+      let icons = [["info","show states"],["refresh","refresh workflow"],["download","download workflow state"],["copy","copy workflow state"]]
       if (workflow.state=='TERMINATED') {
          icons.push(["play","resume workflow"]);
          icons.push(["trash","delete workflow"]);
@@ -109,8 +120,13 @@ class App {
       let self = this;
       for (let link of $(nav).find('a')) {
          let href = $(link).attr('href');
+         console.log(href)
+         if (href=='#download') {
+            $(link).attr('href',`service/workflows/${workflow.id}/archive`)
+            $(link).attr('target',`${workflow.id}.json`)
+            continue
+         }
          $(link).click(() => {
-            console.log(`${workflow.id} ${href}`);
             if (href=='#refresh') {
                workflow.loaded = false;
                workflow.shown = false;
@@ -126,9 +142,13 @@ class App {
                   $(link).attr("title","hide states")
                }
             } else if (href=='#play') {
-               UIkit.modal.alert('The resume functionality is not implemented.');
+               UIkit.modal.confirm(`Are you sure you want to restart workflow ${workflow.id}`).then(() => {
+                  this.restartWorkflow(workflow);
+               });
             } else if (href=='#copy') {
-               UIkit.modal.alert('The copy functionality is not implemented.');
+               UIkit.modal.prompt('S3 URI:', 's3://yourbucket/path').then((uri) => {
+                  this.archiveWorkflow(workflow,uri)
+               });
             } else if (href=='#ban') {
                UIkit.modal.confirm(`Are you sure you want to stop workflow ${workflow.id}`).then(() => {
                   this.terminateWorkflow(workflow);
@@ -261,16 +281,64 @@ class App {
 
    }
 
+   archiveWorkflow(workflow,uri) {
+      let data = { uri: uri };
+      fetch(`service/workflows/${workflow.id}/archive`,{method:'POST',body:JSON.stringify(data),headers: {'Content-Type': 'application/json'}})
+       .then(response => this.responseFilter(response))
+       .then(data => {
+          console.log(data);
+          UIkit.modal.alert(`Workflow ${workflow.id} archived to ${uri}`);
+       })
+       .catch(error => {
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot archive workflow ${workflow.id} archived to ${uri}\n due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
+       })
+   }
+
+   restartWorkflow(workflow) {
+      fetch(`service/workflows/${workflow.id}/restart`)
+       .then(response => this.responseFilter(response))
+       .then(data => {
+          workflow.loaded = false;
+          workflow.shown = false;
+          setTimeout( () => {
+             this.showWorkflowDetails(workflow);
+          },250);
+       })
+       .catch(error => {
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot restart workflow ${workflow.id} due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
+       })
+   }
+
    terminateWorkflow(workflow) {
       fetch(`service/workflows/${workflow.id}/terminate`)
        .then(response => this.responseFilter(response))
        .then(data => {
           workflow.loaded = false;
           workflow.shown = false;
-          this.showWorkflowDetails(workflow);
+          setTimeout( () => {
+             this.showWorkflowDetails(workflow);
+          },250);
        })
        .catch(error => {
-          console.log(error);
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot terminate workflow ${workflow.id} due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
        })
    }
 
@@ -282,7 +350,13 @@ class App {
           $(workflow.item).remove();
        })
        .catch(error => {
-          console.log(error);
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot delete workflow ${workflow.id} due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
        })
    }
 
