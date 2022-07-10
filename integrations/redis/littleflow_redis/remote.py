@@ -129,6 +129,16 @@ def load_workflow(client,key,return_json=False):
    f = Flow(serialized=object)
    return f if not return_json else (f,object)
 
+def get_failures(client,key):
+   f_key = key+':FAILED'
+   value = client.get(f_key)
+   return np.fromstring(value,dtype=int,sep=' ') if value is not None else None
+
+def set_failures(client,key,failures):
+   value = str(failures.flatten())[1:-1]
+   f_key = key+':FAILED'
+   client.set(f_key,value)
+
 def trace_vector(client,key):
    current = 0
    page_size = 20
@@ -225,7 +235,7 @@ class LifecycleListener(EventListener):
             if self._inprogress_key is not None:
                self.connection.srem(self._inprogress_key,workflow_id)
             set_workflow_state(self.connection,workflow_id,'FINISHED')
-         elif kind=='terminated-workflow':
+         elif kind=='terminated-workflow' or kind=='failed-workflow':
             if self._inprogress_key is not None:
                self.connection.srem(self._inprogress_key,workflow_id)
       self.append(receipt_for(event_id))
@@ -299,6 +309,14 @@ class TaskEndListener(EventListener):
          runner = Runner()
          while not context.ending.empty():
             runner.next(context,context.ending.get())
+      else:
+
+         failures = get_failures(self.connection,key)
+         if failures is None:
+            flow = load_workflow(self.connection,key)
+            failures = np.zeros(flow.F.shape[0],dtype=int)
+         failures[index] = 1
+         set_failures(self.connection,key,failures)
 
       return True
 
@@ -323,5 +341,6 @@ def delete_workflow(client,key,workflows_key=None):
    client.delete(key+':A')
    client.delete(key+':S')
    client.delete(key+':state')
+   client.delete(key+':FAILED')
    if workflows_key is not None:
       client.lrem(workflows_key,0,key)
