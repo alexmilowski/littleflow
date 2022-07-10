@@ -21,6 +21,32 @@ class App {
                   }
                });
             });
+         } else if (href=='#run') {
+
+            $(link).click(() => {
+               let html =
+               '<form id="run" class="uk-form-stacked">' +
+               '<div class="uk-modal-body">' +
+               '<label for="upload-workflow">Select a workflow to start</label><input class="uk-input" id="upload-workflow" type="file">' +
+               '</div>' +
+               '<div class="uk-modal-footer uk-text-right">' +
+               '<button class="uk-button uk-button-default uk-modal-close" type="button">Close</button>' +
+               '<button class="uk-button uk-button-primary">Upload</button>' +
+               '</div>' +
+               '</form>'
+               var dialog = UIkit.modal.dialog(html,{ bgClose: false, escClose: true});
+               UIkit.util.on(dialog.$el,'submit','form',(e) => {
+                  e.preventDefault();
+                  let file = $(dialog.$el).find('input')[0].files[0]
+                  if (file==undefined) {
+                     $(dialog.$el).find('label').text('No selection - select a workflow to start')
+                     return;
+                  }
+                  dialog.hide();
+                  console.log(`Upload ${file.name}`);
+                  this.uploadWorkflow(file);
+               });
+            });
          }
 
       }
@@ -310,6 +336,28 @@ class App {
          }
       }
 
+   }
+
+   uploadWorkflow(file) {
+      let form = new FormData()
+      form.append('workflow',file)
+      fetch(`service/workflows/start/upload`,{method: "POST", body: form})
+       .then(response => this.responseFilter(response))
+       .then(data => {
+          let workflow = {id: data.workflow}
+          this.fetchWorkflowStatus(workflow,() => {
+             this.addWorkflow(workflow,false)
+          });
+       })
+       .catch(error => {
+          if (error.status==400) {
+             error.response.json().then(data => {
+                UIkit.modal.alert(`Cannot upload workflow due to: ${data.message}`);
+             });
+          } else {
+             console.log(error);
+          }
+       })
    }
 
    archiveWorkflow(workflow,uri) {

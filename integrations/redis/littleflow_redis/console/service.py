@@ -35,7 +35,13 @@ def device_status_proxy(path):
       headers = {'Content-Type':request.headers['Content-Type']}
       if 'Content-Length' in request.headers:
          headers['Content-Legth'] = request.headers['Content-Length']
-      response = requests.post(url,data=request.data,headers=headers)
+      if len(request.files)>0:
+         files = {}
+         for key in request.files:
+            files[key] = request.files[key].read()
+         response = requests.post(url,files=files)
+      else:
+         response = requests.post(url,data=request.data,headers=headers)
    headers = {}
    if 'Content-Type' in response.headers:
       headers['Content-Type'] = response.headers['Content-Type']
