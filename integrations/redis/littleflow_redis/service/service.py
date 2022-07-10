@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 # only needed for restarting
 from rqse import EventClient
 
-from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow
+from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow, run_workflow
 from littleflow import graph
 
 class Config:
@@ -353,4 +353,23 @@ def restore_workflow_from_archive():
 
    restore_workflow(event_client.connection,key,archive,workflows_key=current_app.config['WORKFLOWS_KEY'])
 
+   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+
+@service.route('/workflows/start',methods=['POST'])
+def start_workflow_post():
+   workflow = request.data
+   event_client = get_event_client()
+   workflow_id = run_workflow(workflow,event_client)
+   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+
+@service.route('/workflows/start/upload',methods=['POST'])
+def start_workflow_upload():
+   print(request.files);
+   if 'workflow' not in request.files:
+      return error('The workflow was not attached.'), 400
+   file = request.files['workflow']
+   workflow = file.read().decode('UTF-8')
+   event_client = get_event_client()
+   workflow_id = run_workflow(workflow,event_client)
+   _, _, workflow_id = workflow_id.partition(':')
    return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
