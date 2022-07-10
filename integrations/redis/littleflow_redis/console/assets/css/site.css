@@ -34,3 +34,29 @@ tr.ended {
 tr.ended:nth-of-type(odd) {
    background-color: rgba(0,0,100,0.15) !important;
 }
+
+#upload-workflow {
+   border: none;
+   margin-top: 1em;
+}
+
+input[type=file]::file-selector-button {
+  border: 1px solid transparent;
+  padding: .4em .8em;
+  border-radius: 0;
+  background-color: rgba(0,0,100,0.5);
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+input[type=file]::file-selector-button:hover {
+   background-color: rgba(0,0,100,0.6);
+}
+
+.uk-button.uk-button-primary {
+   background-color: rgba(0,0,100,0.5)
+}
+.uk-button.uk-button-primary:hover {
+   background-color: rgba(0,0,100,0.6);
+}
