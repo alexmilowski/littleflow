@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 # only needed for restarting
 from rqse import EventClient
 
-from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow, run_workflow
+from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow, run_workflow, get_failures
 from littleflow import graph
 
 class Config:
@@ -220,7 +220,11 @@ def get_workflow_state(workflow_id):
       state = 'UKNOWN'
    S = compute_vector(client,key+':S')
    A = compute_vector(client,key+':A')
-   return jsonify({'state':state, 'S':S.flatten().tolist() if S is not None else [], 'A': A.flatten().tolist() if A is not None else []})
+   failures = get_failures(client,key)
+   data = {'state':state, 'S':S.flatten().tolist() if S is not None else [], 'A': A.flatten().tolist() if A is not None else []}
+   if failures is not None:
+      data['failures'] = failures.flatten().tolist()
+   return jsonify(data)
 
 @service.route('/workflows/<workflow_id>/trace/<kind>',methods=['GET'])
 def get_workflow_trace(workflow_id,kind):
