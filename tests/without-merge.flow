@@ -1,0 +1,11 @@
+<- test: true -> → A
+→ {
+  B
+  C
+} → D → {
+  B
+  C
+} → {
+  B
+  C
+}→ :end
