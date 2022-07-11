@@ -366,8 +366,11 @@ def restore_workflow_from_archive():
 def start_workflow_post():
    workflow = request.data
    event_client = get_event_client()
-   workflow_id = run_workflow(workflow,event_client)
-   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+   try:
+      workflow_id = run_workflow(workflow,event_client)
+      return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+   except Exception as ex:
+      return error(f'Cannot compile workflow due to: {ex}'), 400
 
 @service.route('/workflows/start/upload',methods=['POST'])
 def start_workflow_upload():
@@ -376,6 +379,9 @@ def start_workflow_upload():
    file = request.files['workflow']
    workflow = file.read().decode('UTF-8')
    event_client = get_event_client()
-   workflow_id = run_workflow(workflow,event_client)
-   _, _, workflow_id = workflow_id.partition(':')
-   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+   try:
+      workflow_id = run_workflow(workflow,event_client)
+      _, _, workflow_id = workflow_id.partition(':')
+      return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+   except Exception as ex:
+      return error(f'Cannot compile workflow due to: {ex}'), 400
