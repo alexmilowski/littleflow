@@ -86,7 +86,7 @@ class Compiler:
             except ValueError as ex:
                raise ValueError(f'{step.line}:{step.column} {ex}')
          elif isinstance(step,SubFlow):
-            flow[index] = InvokeFlow(index)
+            flow[index] = InvokeFlow(index,merge=step.merge)
          elif isinstance(step,Start):
             flow[index] = Source(index,{})
          elif isinstance(step,End):
