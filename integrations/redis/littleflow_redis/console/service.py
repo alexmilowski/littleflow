@@ -27,6 +27,17 @@ def assets(path):
 def device_status_proxy(path):
    url = current_app.config['API']
    url += path
+   first_arg = True
+   for name, value in request.args.items():
+      if first_arg:
+         url += '?'
+      else:
+         url += '&'
+      first_arg = False
+      url += name
+      url += '='
+      # TODOL: encode value
+      url += value
    if request.method=='GET':
       response = requests.get(url)
    elif request.method=='DELETE':
