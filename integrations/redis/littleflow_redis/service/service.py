@@ -248,9 +248,12 @@ def get_workflow_graph(workflow_id):
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
       return error(f'Workflow {workflow_id} does not exist'), 404
+   left_to_right = True
+   if request.args.get('orientation','horizontal')=='vertical':
+      left_to_right = False
    flow = load_workflow(client,key)
    output = io.StringIO()
-   graph(flow,output,embed_docs=False)
+   graph(flow,output,embed_docs=False,left_to_right=left_to_right)
    return output.getvalue(), 200, {'Content-Type':'text/plain; charset=UTF-8'}
 
 @service.route('/workflows/<workflow_id>/archive',methods=['GET','POST'])
@@ -368,7 +371,6 @@ def start_workflow_post():
 
 @service.route('/workflows/start/upload',methods=['POST'])
 def start_workflow_upload():
-   print(request.files);
    if 'workflow' not in request.files:
       return error('The workflow was not attached.'), 400
    file = request.files['workflow']
