@@ -91,6 +91,7 @@ def restart_workflow(event_client,key,workflow_id):
    client = event_client.connection
    S = compute_vector(client,key+':S')
    if S.sum()>0:
+      client.delete(key+':FAILED')
       set_workflow_state(client,key,'RUNNING')
       context = load_workflow_state(event_client, key, workflow_id)
       context.start(S)
