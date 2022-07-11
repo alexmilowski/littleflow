@@ -31,7 +31,7 @@ class App {
                '</div>' +
                '<div class="uk-modal-footer uk-text-right">' +
                '<button class="uk-button uk-button-default uk-modal-close" type="button">Close</button>' +
-               '<button class="uk-button uk-button-primary">Upload</button>' +
+               '<button class="uk-button uk-button-primary">Start</button>' +
                '</div>' +
                '</form>'
                var dialog = UIkit.modal.dialog(html,{ bgClose: false, escClose: true});
@@ -296,6 +296,17 @@ class App {
       if (workflow.ended) {
          workflow.graph.end.element.setAttribute("uk-tooltip",`title: ${workflow.ended.toISOString()}`)
       }
+      if (workflow.failures!=undefined) {
+         for (let index in workflow.failures) {
+            if (workflow.failures[index]>0) {
+               let task = tasks[index]
+               let node = workflow.graph.tasks[task[1].name]
+               node.element.classList.remove("started")
+               node.element.classList.remove("ended")
+               node.element.classList.add("failed")
+            }
+         }
+      }
    }
 
    showWorkflowNode(workflow,node) {
@@ -332,6 +343,12 @@ class App {
                $(row).find('.ended').empty().text(dt.toISOString());
                $(row).removeClass('started');
                $(row).addClass('ended');
+            }
+            if (workflow.failures!=undefined && workflow.failures[index]>0) {
+               $(row).removeClass('started');
+               $(row).removeClass('ended');
+               $(row).addClass('failed');
+               $(row).find('.ended').empty().text('FAILED');
             }
          }
       }
@@ -498,6 +515,7 @@ class App {
        .then(response => this.responseFilter(response))
        .then(data => {
           workflow.state = data.state
+          workflow.failures = data.failures
           setTimeout(callback,1)
        })
        .catch(error => {
