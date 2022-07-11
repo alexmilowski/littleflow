@@ -54,6 +54,10 @@ class App {
       this.fetchWorkflows(0,50)
    }
 
+   _mangle(name) {
+      return name==undefined ? name : name.replaceAll(":","_COLON_").replaceAll("-","_HYPHEN_")
+   }
+
    responseFilter(response) {
       if (response.status==401) {
          // Setup auth
@@ -227,7 +231,7 @@ class App {
             let parts = id.split('-');
 
             // Note: This is a bug in mermaid
-            if (parts[1]=='</join></fork>') {
+            if (parts[1].startsWith('</join>')) {
               g.remove();
               continue;
             }
@@ -256,7 +260,7 @@ class App {
       for (let [timestamp,S] of workflow.S) {
          for (let index in S) {
             let task = tasks[index]
-            let node = workflow.graph.tasks[task[1].name]
+            let node = workflow.graph.tasks[this._mangle(task[1].name)]
             let dt = new Date(timestamp)
             if (S[index]>0 && index==0) {
                workflow.started = dt
@@ -300,7 +304,12 @@ class App {
          for (let index in workflow.failures) {
             if (workflow.failures[index]>0) {
                let task = tasks[index]
-               let node = workflow.graph.tasks[task[1].name]
+               let node = workflow.graph.tasks[this._mangle(task[1].name)]
+               if (node==undefined) {
+                  console.log(`Cannot find node for failure ${index} ${task[0]} ${this._mangle(task[1].name)}`)
+                  console.log(task[1])
+                  console.log(workflow.graph.tasks)
+               }
                node.element.classList.remove("started")
                node.element.classList.remove("ended")
                node.element.classList.add("failed")
