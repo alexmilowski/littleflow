@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 
 import click
 
@@ -22,11 +23,15 @@ def compile(files):
       try:
          with open(file,'r') as input:
             model = p.parse(input)
+            print('Model:')
             print(model)
+            print()
             flow = c.compile(model)
             if flow.name is not None:
-               print(flow.name)
+               print(f'Flow: {flow.name}')
             print(flow.F)
+            for index in range(len(flow)):
+               print(flow[index])
 
       except FileNotFoundError as ex:
          print(f'Cannot open {file}',file=sys.stderr)
