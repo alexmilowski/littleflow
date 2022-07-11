@@ -31,7 +31,7 @@ OR: "|"
 MERGE: ">"
 DECLARE: "@" NAME
 LABEL: ":" NAME
-NAME: /[a-zA-Z_]\w*/
+NAME: /[a-zA-Z_][\w\-_:]*/
 DEC_NUMBER: /0|[1-9][\d_]*/i
 EXPR: /`[^`]*`/
 STRING: /("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
