@@ -1,8 +1,10 @@
 from .flow import Source, Sink, InvokeTask, InvokeFlow
 
+def mangle(name):
+   return name.replace(':','_COLON_').replace('-','_HYPHEN_')
 def graph_name(obj,end=-1):
    if isinstance(obj,InvokeTask):
-      return f'{obj.name}.{obj.index}'
+      return f'{mangle(obj.name)}.{obj.index}'
    elif isinstance(obj,Source):
       return '[*]'
    elif isinstance(obj,Sink):
@@ -16,10 +18,11 @@ def shortdesc(doc):
    oneliner, _, rest = doc.strip().partition('\n')
    return oneliner
 
-def graph(flow,output,format='mermaid',name='workflow',embed_docs=True):
+def graph(flow,output,format='mermaid',name='workflow',embed_docs=True,left_to_right=True):
    assert format=='mermaid', 'Only mermaid is currently supported'
    print(f'stateDiagram-v2',file=output)
-   print('  direction LR',file=output)
+   if left_to_right:
+      print('  direction LR',file=output)
    size = len(flow)
    for index in range(size):
       invocation = flow[index]

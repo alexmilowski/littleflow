@@ -90,8 +90,9 @@ def run(limit,show_cache,workflow):
 
 @cli.command()
 @click.option('--no-docs',is_flag=True)
+@click.option('--vertical',is_flag=True)
 @click.argument('workflow')
-def doc(no_docs,workflow):
+def doc(no_docs,vertical,workflow):
    p = Parser()
    c = Compiler()
    try:
@@ -101,7 +102,7 @@ def doc(no_docs,workflow):
    except FileNotFoundError as ex:
       print(f'Cannot open {file}',file=sys.stderr)
 
-   graph(flow,sys.stdout,embed_docs=not no_docs)
+   graph(flow,sys.stdout,embed_docs=not no_docs,left_to_right=not vertical)
 
 
 if __name__=='__main__':
