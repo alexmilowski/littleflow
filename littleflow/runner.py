@@ -241,6 +241,8 @@ class Context:
          self.ended(value)
 
    def append_input_for(self,source,target,value):
+      if value is None:
+         return
       if type(value)!=list and type(value)!=dict:
          raise ValueError(f'The value of the input must be a list or dict: {type(value)}')
       self._cache.append_input_for(source,target,value)
