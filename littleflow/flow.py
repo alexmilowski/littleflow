@@ -13,6 +13,7 @@ class Source(Invocation):
 
 @dataclass
 class Sink(Invocation):
+   merge: bool = False
    pass
 
 @dataclass
@@ -20,9 +21,11 @@ class InvokeTask(Invocation):
    name: str
    parameters : 'typing.Any' = None
    doc: str = None
+   merge: bool = False
 
 @dataclass
 class InvokeFlow(Invocation):
+   merge: bool = False
    pass
 
 

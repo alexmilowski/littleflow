@@ -82,7 +82,7 @@ def run(limit,show_cache,workflow):
 
    runner = Runner()
    context = LogContext(flow)
-   context.start(context.initial)
+   runner.start(context)
    count = 0
    while (limit<0 or count<limit) and not context.ending.empty():
       count += 1

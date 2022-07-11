@@ -57,12 +57,14 @@ class ResourceSource(Step):
 class ResourceSink(Step):
    index : int
    uri : str = ''
+   merge : bool = False
    parameters: ParameterLiteral = None
 
 @dataclass
 class Task(Step):
    index : int
    name : str
+   merge : bool = False
    line : int = 0
    column : int = 0
    parameters : ParameterLiteral = None
@@ -71,11 +73,13 @@ class Task(Step):
 class Statement:
    source : str = None
    destination : str = None
+   merge_destination : bool = False
    steps : list[Step] = field(default_factory=list)
 
 @dataclass
 class SubFlow(Step):
    index : int
+   merge : bool = False
    named_inputs : dict = field(default_factory=dict)
    named_outputs : dict = field(default_factory=dict)
    statements : list[Statement] = field(default_factory=list)

@@ -12,7 +12,7 @@ task: NAME parameter_literal?
 subflow: "{" flow_statement+ "}"
 conditional: "if" EXPR "then" step ("elif" EXPR "then" step)* ("else" step)?
 source: LABEL | resource | resource_literal
-destination: LABEL | resource
+destination: MERGE? (LABEL | resource)
 resource: URI parameter_literal?
 parameter_literal: empty_parameter | json_object_parameter | json_array_parameter | yaml_parameter
 empty_parameter: "(" ")"
@@ -144,7 +144,7 @@ class Parser:
          elif item.data=='subflow':
             ancestors.append((flow,statement))
             index += 1
-            flow = SubFlow(index)
+            flow = SubFlow(index,merge=merge)
             workflow.flows.append(flow)
             start = Start(index)
             if iterate:
@@ -170,9 +170,12 @@ class Parser:
             output_label = None
             before = True
             iterate = False
+            merge = False
             for child in item.children:
                if isinstance(child,Token) and child.type=='STAR':
                   iterate = True
+               elif isinstance(child,Token) and child.type=='MERGE':
+                  merge = True
                elif isinstance(child,Token) and child.type=='LABEL':
                   if before:
                      input_label = child
@@ -231,7 +234,7 @@ class Parser:
             assert len(item.children)==1, 'meet shorthand not supported'
          elif item.data=='task':
             index += 1
-            step = Task(index,item.children[0].value)
+            step = Task(index,item.children[0].value,merge=merge)
             step.line = item.children[0].line
             step.column = item.children[0].column
             if iterate:
@@ -240,11 +243,12 @@ class Parser:
             realize_step(step)
             subject = step
          elif item.data=='destination':
-            if isinstance(item.children[0],Token) and item.children[0].type=='LABEL':
-               statement.destination = item.children[0].value[1:]
-            elif isinstance(item.children[0],Tree) and item.children[0].data.value=='resource':
+            if isinstance(item.children[-1],Token) and item.children[-1].type=='LABEL':
+               statement.destination = item.children[-1].value[1:]
+               statement.merge_destination = isinstance(item.children[0],Token) and item.children[0].type=='MERGE'
+            elif isinstance(item.children[-1],Tree) and item.children[-1].data.value=='resource':
                index += 1
-               subject = ResourceSink(index)
+               subject = ResourceSink(index,merge=isinstance(item.children[0],Token) and item.children[0].type=='MERGE')
                realize_step(subject)
          elif item.data=='doc_comment':
             subject.doc = item.children[0].value

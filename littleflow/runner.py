@@ -2,7 +2,7 @@ from queue import SimpleQueue
 import types
 
 import numpy as np
-from .flow import Flow, Source, Sink, InvokeTask
+from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow
 
 class InputCache:
 
@@ -25,9 +25,15 @@ class MemoryInputCache(InputCache):
          if len(input)==0:
             self._cache[target] = value
          else:
-            self._cache[target] = [input,value]
+            if type(value)==list:
+               self._cache[target] = [input] + value
+            else:
+               self._cache[target] = [input,value]
       else:
-         input.append(value)
+         if type(value)==list:
+            input.extend(value)
+         else:
+            input.append(value)
 
    def input_for(self,index):
       input = self._cache.get(index)
@@ -93,6 +99,16 @@ class FunctionTaskContext(TaskContext):
       immediate[invocation.index] = 1
       context.ending.put(immediate)
 
+def merge(input):
+   if type(input)!=list:
+      return
+   result = {}
+   for item in input:
+      if type(item)!=dict:
+         raise ValueError(f'Item in merge is not of type dict: {type(item)}')
+      for key, value in item.items():
+         result[key] = value
+   return result
 
 class Context:
    def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache(),task_context=TaskContext()):
@@ -185,11 +201,20 @@ class Context:
             input = self.input_for(index)
             assert input is not None, f'None value return for {index}'
             if isinstance(invocation,InvokeTask):
+               if invocation.merge:
+                  input = merge(input)
                self.start_task(invocation,input)
             elif isinstance(invocation,Source):
                self.output_for(index,invocation.value)
                immediate[index] = 1
             elif isinstance(invocation,Sink):
+               if invocation.merge:
+                  input = merge(input)
+               self.output_for(index,input)
+               immediate[index] = 1
+            elif isinstance(invocation,InvokeFlow):
+               if invocation.merge:
+                  input = merge(input)
                self.output_for(index,input)
                immediate[index] = 1
             else:
@@ -216,6 +241,8 @@ class Context:
          self.ended(value)
 
    def append_input_for(self,source,target,value):
+      if type(value)!=list and type(value)!=dict:
+         raise ValueError(f'The value of the input must be a list or dict: {type(value)}')
       self._cache.append_input_for(source,target,value)
 
    def input_for(self,index):

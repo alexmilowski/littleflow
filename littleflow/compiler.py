@@ -76,7 +76,7 @@ class Compiler:
 
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
-            flow[index] = InvokeTask(index,step.name,value)
+            flow[index] = InvokeTask(index,step.name,value,merge=step.merge)
             if decl is not None:
                flow[index].doc = decl.doc
          elif isinstance(step,LiteralSource):
@@ -118,6 +118,7 @@ class Compiler:
                named = subflow.named_inputs.get(statement.destination)
                if named is None:
                   raise ValueError(f'Unknown input label {statement.destination}')
+               flow[named.index].merge = flow[named.index].merge or statement.merge_destination
                flow.F[current,named.index] = 1
             else:
                named = subflow.named_inputs.get('end')
