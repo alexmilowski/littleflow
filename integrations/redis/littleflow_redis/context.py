@@ -24,11 +24,17 @@ class RedisInputCache(InputCache):
 
          # if a dictionary, convert to a list
          if type(current)==dict:
+            if type(value)==list:
+               current = [current] + value
+            else:
+               current = [current,value]
             current = [current,value]
          else:
-            # otherwise, we should have a list
             assert type(current)==list, 'Non-array value retrieved from Redis'
-            current.append(value)
+            if type(value)==list:
+               current.extend(value)
+            else:
+               current.append(value)
 
          # commit new value
          self._client.set(key,json.dumps(current))
