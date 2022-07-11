@@ -64,10 +64,11 @@ def run(stream,workflow_id,wait,workflow):
 
 @cli.command('worker')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
-@click.option('--group',help='The consume group',default='ending')
+@click.option('--group',help='The consumer group',default='ending')
+@click.option('--lifecycle-group',help='The lifecycle consumer group',default='lifecycle')
 @click.option('--workflows',help='The key for the workflows set',default=default_workflows_key)
 @click.option('--inprogress',help='The key for the inprogress set',default=default_inprogress_key)
-def worker(stream,group,workflows,inprogress):
+def worker(stream,group,lifecycle_group,workflows,inprogress):
 
    # we need something that will respond to end tasks and the algorithm forward
    end_listener = TaskEndListener(stream,group)
@@ -84,7 +85,7 @@ def worker(stream,group,workflows,inprogress):
    # make sure we're connected
    assert end_listener.established
 
-   recorder = LifecycleListener(stream,'lifecycle',workflows_key=workflows,inprogress_key=inprogress)
+   recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress)
 
    interrupt_count = 0
    def interrupt_handler(signum,frame):
