@@ -86,6 +86,7 @@ class App {
 
    addWorkflows(data) {
       for (let workflow of data) {
+         workflow.orientation = 'horizontal'
          this.addWorkflow(workflow,true)
       }
    }
@@ -148,7 +149,7 @@ class App {
       $(workflow.item).find(".uk-accordion-content").empty();
       let content = $(workflow.item).find(".uk-accordion-content");
       let nav_html = '<ul class="uk-iconnav">'
-      let icons = [["info","show states"],["refresh","refresh workflow"],["download","download workflow state"],["copy","copy workflow state"]]
+      let icons = [["info","show states"],["refresh","refresh workflow"],[workflow.orientation=='horizontal' ? "arrow-down" : "arrow-right","change orientation","orientation"],["download","download workflow state"],["copy","copy workflow state"]]
       if (workflow.state=='TERMINATED' || workflow.state=='FAILED') {
          icons.push(["play","resume workflow"]);
          icons.push(["trash","delete workflow"]);
@@ -159,13 +160,16 @@ class App {
       } else if (workflow.state=='FINISHED') {
          icons.push(["trash","delete workflow"]);
       }
-      for (let [icon,title] of icons) {
-         nav_html += `<li><a href="#${icon}" uk-icon="icon: ${icon}" title="${title}"></a></li>`
+      for (let [icon,title,href] of icons) {
+         if (href==undefined) {
+            href = icon
+         }
+         nav_html += `<li><a href="#${href}" uk-icon="icon: ${icon}" title="${title}"></a></li>`
       }
       nav_html += "</ul>";
       let nav = $(nav_html).appendTo(content);
 
-      $(`<div class="mermaid">${workflow.graph.mermaid}</div>`).appendTo(content);
+      $(`<div class="mermaid ${workflow.orientation}">${workflow.graph.mermaid}</div>`).appendTo(content);
       mermaid.init({}, $(workflow.item).find(".uk-accordion-content .mermaid"));
       workflow.shown = true;
       // TODO: need a callback from above
@@ -192,6 +196,19 @@ class App {
                   this.showWorkflowTaskDetails(workflow);
                   $(link).attr("title","hide states")
                }
+            });
+         } else if (href=='#orientation') {
+            $(link).click(() => {
+               if (workflow.orientation=='horizontal') {
+                  workflow.orientation = 'vertical';
+                  $(link).attr("uk-icon","icon: arrow-right")
+               } else {
+                  workflow.orientation = 'horizontal';
+                  $(link).attr("uk-icon","icon: arrow-down")
+               }
+               workflow.loaded = false;
+               workflow.shown = false;
+               this.showWorkflowDetails(workflow);
             });
          } else if (href=='#play') {
             $(link).click(() => {
@@ -252,6 +269,24 @@ class App {
             }
          }
          self.updateGraphForWorkflow(workflow);
+         workflow.svg = $(workflow.item).find('.mermaid svg')[0];
+         workflow.svgContainer = $(workflow.item).find('.mermaid')[0];
+         // This is because UIkit messes with the size
+         setTimeout(() => {
+            $(workflow.svg).removeAttr('height')
+            $(workflow.svg).removeAttr('style')
+            workflow.zoomer = svgPanZoom(workflow.svg, {
+              zoomEnabled: true,
+              panEnabled: true,
+              dblClickZoomEnabled: true,
+              mouseWheelZoomEnabled: true,
+              controlIconsEnabled: true,
+              fit: true,
+              center: true,
+              contain: true
+            });
+         },10);
+
       },100);
    }
 
@@ -319,7 +354,7 @@ class App {
    }
 
    showWorkflowNode(workflow,node) {
-      console.log(node);
+      //console.log(node);
    }
 
    showWorkflowTaskDetails(workflow) {
@@ -370,7 +405,7 @@ class App {
       fetch(`service/workflows/start/upload`,{method: "POST", body: form})
        .then(response => this.responseFilter(response))
        .then(data => {
-          let workflow = {id: data.workflow}
+          let workflow = {id: data.workflow, orientation:'horizontal'}
           this.fetchWorkflowStatus(workflow,() => {
              this.addWorkflow(workflow,false)
           });
@@ -410,7 +445,7 @@ class App {
       fetch(`service/workflows/restore`,{method:'POST',body:JSON.stringify(data),headers: {'Content-Type': 'application/json'}})
        .then(response => this.responseFilter(response))
        .then(data => {
-          let workflow = {id: data.workflow}
+          let workflow = {id: data.workflow, orientation:'horizontal'}
           this.fetchWorkflowStatus(workflow,() => {
              this.addWorkflow(workflow,false)
           });
@@ -498,7 +533,7 @@ class App {
        })
    }
    fetchWorkflowGraph(workflow,callback) {
-      fetch(`service/workflows/${workflow.id}/graph`)
+      fetch(`service/workflows/${workflow.id}/graph?orientation=${workflow.orientation}`)
        .then(response => response.text())
        .then(data => {
           workflow.graph = { 'mermaid' : data, 'tasks' : {} }

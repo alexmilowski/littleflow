@@ -61,6 +61,21 @@ input[type=file]::file-selector-button {
   text-transform: uppercase;
   font-size: 0.875rem;
 }
+.mermaid svg {
+   display: block;
+   width: 80%;
+   margin-left: auto;
+   margin-right: auto;
+}
+
+.mermaid.horizontal svg {
+   height: 40vh;
+}
+
+
+.mermaid.vertical svg {
+   height: 80vh;
+}
 
 input[type=file]::file-selector-button:hover {
    background-color: rgba(0,0,100,0.6);
@@ -72,3 +87,5 @@ input[type=file]::file-selector-button:hover {
 .uk-button.uk-button-primary:hover {
    background-color: rgba(0,0,100,0.6);
 }
+
+.svg-pan-zoom-control { position: relative; top: 50px;}
