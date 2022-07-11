@@ -64,12 +64,13 @@ def run(stream,workflow_id,wait,workflow):
 
 @cli.command('worker')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
+@click.option('--group',help='The consume group',default='ending')
 @click.option('--workflows',help='The key for the workflows set',default=default_workflows_key)
 @click.option('--inprogress',help='The key for the inprogress set',default=default_inprogress_key)
-def worker(stream,workflows,inprogress):
+def worker(stream,group,workflows,inprogress):
 
    # we need something that will respond to end tasks and the algorithm forward
-   end_listener = TaskEndListener(stream,'ending')
+   end_listener = TaskEndListener(stream,group)
 
    ending = threading.Thread(target=lambda : end_listener.listen())
    ending.start()
@@ -103,9 +104,10 @@ def worker(stream,workflows,inprogress):
 
 @cli.command('simulate')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
+@click.option('--group',help='The consume group',default='starting')
 @click.option('--wait-period',help='The amount of time to wait',default=3,type=int)
 @click.option('--failures',help='The percent of failures',default=0.0,type=float)
-def simulate(stream,wait_period,failures):
+def simulate(stream,group,wait_period,failures):
 
    failures = failures / 100.0
 
@@ -133,7 +135,7 @@ def simulate(stream,wait_period,failures):
          return True
 
    # we need something to simular tasks. This will wait a random number of seconds.
-   waiter = RandomWait(stream,'starting')
+   waiter = RandomWait(stream,group)
    waiter.listen()
 
 @cli.command('receipts')
