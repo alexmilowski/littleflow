@@ -1,0 +1,3 @@
+@flow wait-event
+
+wait:event (- event: wait-test -)
