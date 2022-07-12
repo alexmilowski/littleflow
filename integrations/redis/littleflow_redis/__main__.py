@@ -7,8 +7,10 @@ import signal
 
 import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
+import redis
 
 from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener
+from littleflow_redis import compute_vector, trace_vector
 
 default_stream_key = 'workflows:run'
 default_workflows_key = 'workflows:all'
@@ -151,6 +153,43 @@ def receipts(stream):
    logger = ReceiptLog()
    receipts = ReceiptListener(stream,logger=logger)
    receipts.listen()
+
+def format_vector(v):
+   s = '['
+   for index,c in enumerate(v):
+      if index>0:
+         s += ' '
+      s += f'{c:2}'
+   s += ']'
+   return s
+
+@cli.command('inspect')
+@click.option('--all',is_flag=True)
+@click.argument('workflow_id')
+def adjust(all,workflow_id):
+   client = redis.Redis(host=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
+   key = 'workflow:'+workflow_id
+   for name in ['A','S']:
+      if all:
+         vectors = {}
+         for tstamp, value in trace_vector(client,key+':'+name):
+            vectors[tstamp] = value
+
+         for tstamp in sorted(vectors.keys()):
+            value = vectors[tstamp]
+            print(name,format_vector(value.flatten()),tstamp.isoformat())
+      V = compute_vector(client,key+':'+name)
+      print(name,format_vector(V.flatten()))
+
+
+# Not now ... adjusting is dangerous
+# @cli.command('adjust')
+# @click.argument('workflow_id')
+# @click.argument('vector')
+# @click.argument('adjustment',nargs=-1)
+# def adjust(workflow_id,vector,adjustment):
+#    pass
+#
 
 if __name__=='__main__':
    cli()
