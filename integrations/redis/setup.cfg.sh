@@ -2,11 +2,11 @@
 VERSION=`python -c "import littleflow_redis; print('.'.join(map(str,littleflow_redis.__version__)))"`
 AUTHOR=`python -c "import littleflow_redis; print(littleflow_redis.__author__)"`
 EMAIL=`python -c "import littleflow_redis; print(littleflow_redis.__author_email__)"`
-DESCRIPTION="An integration of littleflow with Redis for remote execution"
+DESCRIPTION=`python -c "import littleflow_redis; print(littleflow_redis.__doc__.strip())"`
 REQUIRES=`python -c "list(map(print,['\t'+line.strip() for line in ['littleflow']+open('requirements.txt', 'r').readlines()]))"`
 cat <<EOF > setup.cfg
 [metadata]
-name = littleflow
+name = littleflow_redis
 version = ${VERSION}
 author = ${AUTHOR}
 author_email = ${EMAIL}
