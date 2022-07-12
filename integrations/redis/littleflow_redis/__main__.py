@@ -9,7 +9,7 @@ import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
 import redis
 
-from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener
+from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener, WaitTaskListener
 from littleflow_redis import compute_vector, trace_vector
 
 default_stream_key = 'workflows:run'
@@ -78,14 +78,21 @@ def worker(stream,group,lifecycle_group,workflows,inprogress):
    ending = threading.Thread(target=lambda : end_listener.listen())
    ending.start()
 
+   # we need something that will respond to end tasks and the algorithm forward
+   wait_listener = WaitTaskListener(stream)
+
+   wait = threading.Thread(target=lambda : wait_listener.listen())
+   wait.start()
+
    # jut wait till tings are established
    max_wait = 5
-   while not end_listener.established and max_wait>0:
+   while not end_listener.established and not wait_listener.established and max_wait>0:
       sleep(1)
       max_wait -= 1
 
    # make sure we're connected
    assert end_listener.established
+   assert wait_listener.established
 
    recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress)
 
@@ -98,8 +105,9 @@ def worker(stream,group,lifecycle_group,workflows,inprogress):
          sys.exit(1)
 
       end_listener.stop()
+      wait_listener.stop()
       recorder.stop()
-      print(f'Received interrupt, shutting down (may take {end_listener.wait}s)',flush=True)
+      print(f'Received interrupt, shutting down',flush=True)
 
    signal.signal(signal.SIGINT, interrupt_handler)
 
