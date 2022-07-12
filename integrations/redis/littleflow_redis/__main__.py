@@ -113,6 +113,15 @@ def worker(stream,group,lifecycle_group,workflows,inprogress):
 
    recorder.listen()
 
+@cli.command('event')
+@click.option('--stream',help='The event stream to use',default=default_stream_key)
+@click.argument('event')
+def event(stream,event):
+   client = EventClient(stream,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
+   # TODO: add option for data
+   data = {}
+   client.append(message(data,kind=event))
+
 @cli.command('simulate')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
 @click.option('--group',help='The consume group',default='starting')
