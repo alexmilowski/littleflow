@@ -38,7 +38,7 @@ class RemoteTaskContext(FunctionTaskContext):
       if invocation.parameters is not None:
          event['parameters'] = invocation.parameters
 
-      if len(input)>0:
+      if input is not None and len(input)>0:
          event['input'] = input
 
       self._client.append(message(event,kind='start-task'))
@@ -89,12 +89,29 @@ def workflow_archive(client,key):
 
 def restart_workflow(event_client,key,workflow_id):
    client = event_client.connection
-   S = compute_vector(client,key+':S')
+   s_key = key+':S'
+   S = compute_vector(client,s_key)
    if S.sum()>0:
+      # Make an adjusment to S to take it back to zero
+      ending = - S
+      client.lpush(s_key,str(tstamp())+' '+str(ending.flatten())[1:-1])
+
+      # ensure S is a zero/one vector
+      S = S>0
+      S = 1*S
+
       client.delete(key+':FAILED')
       set_workflow_state(client,key,'RUNNING')
+
+      # reload the context
       context = load_workflow_state(event_client, key, workflow_id)
       context.start(S)
+
+      # run the algorithm forward
+      runner = Runner()
+      while not context.ending.empty():
+         runner.next(context,context.ending.get())
+
       return True
    else:
       return False
