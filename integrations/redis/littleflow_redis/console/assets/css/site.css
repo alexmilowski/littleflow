@@ -61,11 +61,21 @@ input[type=file]::file-selector-button {
   text-transform: uppercase;
   font-size: 0.875rem;
 }
+
+#workflows .uk-accordion-content .uk-iconnav {
+   width: 90%;
+   margin-left: 2em;
+   margin-right: auto;
+   margin-bottom: 0.2rem;
+   padding-bottom: 0.2rem;
+   border-bottom: 1px solid rgba(50,50,50,0.25);
+}
 .mermaid svg {
    display: block;
-   width: 80%;
-   margin-left: auto;
+   width: 90%;
+   margin-left: 2em;
    margin-right: auto;
+   border-bottom: 1px solid rgba(50,50,50,0.25);
 }
 
 .mermaid.horizontal svg {
