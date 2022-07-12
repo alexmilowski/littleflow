@@ -1,6 +1,7 @@
 import collections
 import threading
 from dataclasses import dataclass
+from uuid import uuid4
 
 from rqse import EventListener, message, receipt_for
 
@@ -12,8 +13,8 @@ class TaskInfo:
    parameters : 'typing.Any' = None
 
 class WaitForEventListener(EventListener):
-   def __init__(self,parent,info,event_name,send_receipt=True,match={},server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=[event_name],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,parent,info,event_name,send_receipt=True,match={},server='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,f'wait-for-{uuid4()}',select=[event_name],server=server,port=port,username=username,password=password,pool=pool)
       self.parent = parent
       self._event_name = event_name
       self._info = info
@@ -42,7 +43,7 @@ class WaitForEventListener(EventListener):
       return True
 
    def process(self,event_id, event):
-      if not matches(event):
+      if not self.matches(event):
          return False
       if self._send_receipt:
          self.append(receipt_for(event_id))
@@ -120,9 +121,9 @@ class WaitTaskListener(EventListener):
       finally:
          self._lock.release()
 
-   def wait_for(self,info,event_name,sent_receipt=True,match={}):
+   def wait_for(self,info,event_name,send_receipt=True,match={}):
       print(f'Workflow {info.workflow_id} is waiting for event {event_name}',flush=True)
-      listener = WaitForEventListener(self,info,event_name,send_receipt,match,pool=self.pool)
+      listener = WaitForEventListener(self._stream_key,self,info,event_name,send_receipt,match,pool=self.pool)
       if not self.start_work(listener):
          return False
       return True
