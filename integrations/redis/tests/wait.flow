@@ -1,0 +1,3 @@
+@flow delay
+
+wait:delay (- duration: 10 -)
