@@ -136,6 +136,9 @@ def simulate(stream,group,wait_period,failures):
       def process(self,event_id, event):
          workflow_id = event.get('workflow')
          name = event.get('name')
+         category, _, task_name = name.partition(':')
+         if category=='wait':
+            return False
          index = event.get('index')
          self.append(receipt_for(event_id))
          event = {'name':name,'index':index,'workflow':workflow_id}
@@ -196,7 +199,8 @@ def adjust(all,workflow_id):
             value = vectors[tstamp]
             print(name,format_vector(value.flatten()),tstamp.isoformat())
       V = compute_vector(client,key+':'+name)
-      print(name,format_vector(V.flatten()))
+      if V is not None:
+         print(name,format_vector(V.flatten()))
 
 
 # Not now ... adjusting is dangerous
