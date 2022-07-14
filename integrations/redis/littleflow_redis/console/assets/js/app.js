@@ -253,8 +253,8 @@ class App {
               continue;
             }
             let [name,index] = parts[1].split(".")
-            let node =  {"element" : g, "id":id, "index": parseInt(index)}
-            workflow.graph.tasks[name] = node
+            let node =  {"element" : g, "name":name,"id":id, "index": parseInt(index)}
+            workflow.graph.tasks[parts[1]] = node
             $(g).hover(() => {
                this.showWorkflowNode(workflow,node)
             })
@@ -295,7 +295,7 @@ class App {
       for (let [timestamp,S] of workflow.S) {
          for (let index in S) {
             let task = tasks[index]
-            let node = workflow.graph.tasks[this._mangle(task[1].name)]
+            let node = workflow.graph.tasks[`${this._mangle(task[1].name)}.${index}`]
             let dt = new Date(timestamp)
             if (S[index]>0 && index==0) {
                workflow.started = dt
@@ -339,7 +339,7 @@ class App {
          for (let index in workflow.failures) {
             if (workflow.failures[index]>0) {
                let task = tasks[index]
-               let node = workflow.graph.tasks[this._mangle(task[1].name)]
+               let node = workflow.graph.tasks[`${this._mangle(task[1].name)}.${index}`]
                if (node==undefined) {
                   console.log(`Cannot find node for failure ${index} ${task[0]} ${this._mangle(task[1].name)}`)
                   console.log(task[1])
