@@ -144,7 +144,6 @@ class WaitTaskListener(EventListener):
       name = event.get('name')
       index = event.get('index')
       ns, _, task_name = name.partition(':')
-      print(ns,task_name)
       if ns!='wait':
          return False
 
@@ -173,7 +172,10 @@ class WaitTaskListener(EventListener):
 
          match_kind = parameters.get('match',None)
          if match_kind=='input':
-            match = input if type(input)==dict else input[0]
+            if input is None:
+               match = {}
+            else:
+               match = input if type(input)==dict else input[0]
          else:
             match = {}
 
