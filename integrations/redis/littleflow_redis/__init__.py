@@ -10,3 +10,4 @@ from .remote import RemoteTaskContext, RedisContext, TaskEndListener, TaskStartL
                     workflow_archive, restore_workflow, save_workflow, load_workflow, load_workflow_state, workflow_state, is_running, delete_workflow, \
                     terminate_workflow, restart_workflow, get_failures, set_failures
 from .wait import WaitTaskListener
+from .cli import cli as main
