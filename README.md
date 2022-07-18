@@ -25,7 +25,8 @@ flow = c.compile(model)
 context = Context(flow)
 runner = Runner()
 
-context.start(context.initial)
+runner.start(context)
+
 while not context.ending.empty():
    runner.next(context,context.ending.get())
 ```
