@@ -3,8 +3,8 @@ from time import sleep
 
 class BatchStart(EventListener):
 
-   def __init__(self,key,group,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-task'],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,group,host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,group,select=['start-task'],host=host,port=port,username=username,password=password,pool=pool)
 
    def process(self,event_id, event):
       workflow_id = event.get('workflow')

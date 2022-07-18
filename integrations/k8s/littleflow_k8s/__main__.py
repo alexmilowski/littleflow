@@ -1,3 +1,4 @@
+import os
 import threading
 import signal
 
@@ -45,7 +46,11 @@ def track(stream,trackers):
 @click.option('--group',help='The consume group',default='starting-batch')
 @click.option('--listeners',help='The number of listeners',default=1,type=int)
 @click.option('--trackers',help='The number of trackers',default=1,type=int)
-def worker(stream,group,listeners,trackers):
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+def worker(stream,group,listeners,trackers,host,port,username,password):
 
    if listeners<1 and trackers<1:
       return
@@ -62,7 +67,7 @@ def worker(stream,group,listeners,trackers):
    if listeners>0:
 
       for _ in range(listeners):
-         worker = BatchStart(stream,group)
+         worker = BatchStart(stream,group,host=host,port=port,username=username,password=password)
          workers.append(worker)
          worker_threads.append(threading.Thread(target=lambda : worker.listen()))
          worker_threads[-1].start()

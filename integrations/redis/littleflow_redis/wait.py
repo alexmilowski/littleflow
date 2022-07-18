@@ -13,8 +13,8 @@ class TaskInfo:
    parameters : 'typing.Any' = None
 
 class WaitForEventListener(EventListener):
-   def __init__(self,key,parent,info,event_name,send_receipt=True,match={},server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,f'wait-for-{uuid4()}',select=[event_name],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,parent,info,event_name,send_receipt=True,match={},host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,f'wait-for-{uuid4()}',select=[event_name],host=host,port=port,username=username,password=password,pool=pool)
       self.parent = parent
       self._event_name = event_name
       self._info = info
@@ -89,8 +89,8 @@ class Delay:
 
 class WaitTaskListener(EventListener):
 
-   def __init__(self,key,group='starting',server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-task'],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,group='starting',host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,group,select=['start-task'],host=host,port=port,username=username,password=password,pool=pool)
       self._work = collections.deque()
       self._lock = threading.RLock()
 

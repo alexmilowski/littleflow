@@ -235,8 +235,8 @@ def run_workflow(workflow,event_client,workflow_id=None,prefix=''):
 
 class LifecycleListener(EventListener):
 
-   def __init__(self,key,group,workflows_key=None,inprogress_key=None,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-workflow','end-workflow','terminated-workflow','failed-workflow'],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,group,workflows_key=None,inprogress_key=None,host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,group,select=['start-workflow','end-workflow','terminated-workflow','failed-workflow'],host=host,port=port,username=username,password=password,pool=pool)
       self._workflows_key = workflows_key
       self._inprogress_key = inprogress_key
 
@@ -261,14 +261,14 @@ class LifecycleListener(EventListener):
 
 class TaskStartListener(EventListener):
 
-   def __init__(self,key,group,server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['start-task'],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,group,host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,group,select=['start-task'],host=host,port=port,username=username,password=password,pool=pool)
 
 
 class TaskEndListener(EventListener):
 
-   def __init__(self,key,group,prefix='',server='0.0.0.0',port=6379,username=None,password=None,pool=None):
-      super().__init__(key,group,select=['end-task'],server=server,port=port,username=username,password=password,pool=pool)
+   def __init__(self,key,group,prefix='',host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+      super().__init__(key,group,select=['end-task'],host=host,port=port,username=username,password=password,pool=pool)
       self._prefix = prefix
 
    def process(self,event_id, event):

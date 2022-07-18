@@ -24,8 +24,12 @@ def cli():
 @click.option('--stream',help='The event stream to use',default='workflows:run')
 @click.option('--workflow-id',help='The workflow identifier to use.')
 @click.option('--wait',is_flag=True)
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
 @click.argument('workflow')
-def run(stream,workflow_id,wait,workflow):
+def run(stream,workflow_id,wait,host,port,username,password,workflow):
 
    with open(workflow,'r') as data:
       workflow_spec = data.read()
@@ -40,7 +44,7 @@ def run(stream,workflow_id,wait,workflow):
                self.stop()
             return False
 
-      stop_listener = StopAtEnd(stream,'stopping',workflows_key=default_workflows_key,inprogress_key=default_inprogress_key)
+      stop_listener = StopAtEnd(stream,'stopping',workflows_key=default_workflows_key,inprogress_key=default_inprogress_key,host=host,port=port,username=username,password=password)
 
       stopper = threading.Thread(target=lambda : stop_listener.listen())
       stopper.start()
@@ -55,7 +59,7 @@ def run(stream,workflow_id,wait,workflow):
       assert stop_listener.established
 
    # run the workflow
-   client = EventClient(stream,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
+   client = EventClient(stream,host=host,port=port,username=username,password=password)
    workflow_id = run_workflow(workflow_spec,client,workflow_id=workflow_id)
 
    print_id = workflow_id[9:] if workflow_id.startswith('workflow:') else workflow_id
@@ -70,16 +74,20 @@ def run(stream,workflow_id,wait,workflow):
 @click.option('--lifecycle-group',help='The lifecycle consumer group',default='lifecycle')
 @click.option('--workflows',help='The key for the workflows set',default=default_workflows_key)
 @click.option('--inprogress',help='The key for the inprogress set',default=default_inprogress_key)
-def worker(stream,group,lifecycle_group,workflows,inprogress):
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password):
 
    # we need something that will respond to end tasks and the algorithm forward
-   end_listener = TaskEndListener(stream,group)
+   end_listener = TaskEndListener(stream,group,host=host,port=port,username=username,password=password)
 
    ending = threading.Thread(target=lambda : end_listener.listen())
    ending.start()
 
    # we need something that will respond to end tasks and the algorithm forward
-   wait_listener = WaitTaskListener(stream)
+   wait_listener = WaitTaskListener(stream,host=host,port=port,username=username,password=password)
 
    wait = threading.Thread(target=lambda : wait_listener.listen())
    wait.start()
@@ -94,7 +102,7 @@ def worker(stream,group,lifecycle_group,workflows,inprogress):
    assert end_listener.established
    assert wait_listener.established
 
-   recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress)
+   recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress,host=host,port=port,username=username,password=password)
 
    interrupt_count = 0
    def interrupt_handler(signum,frame):
@@ -115,9 +123,13 @@ def worker(stream,group,lifecycle_group,workflows,inprogress):
 
 @cli.command('event')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
 @click.argument('event')
-def event(stream,event):
-   client = EventClient(stream,server=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
+def event(stream,host,port,username,password,event):
+   client = EventClient(stream,host=host,port=port,username=username,password=password)
    # TODO: add option for data
    data = {}
    client.append(message(data,kind=event))
@@ -127,7 +139,11 @@ def event(stream,event):
 @click.option('--group',help='The consume group',default='starting')
 @click.option('--wait-period',help='The amount of time to wait',default=3,type=int)
 @click.option('--failures',help='The percent of failures',default=0.0,type=float)
-def simulate(stream,group,wait_period,failures):
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+def simulate(stream,group,wait_period,failures,host,port,username,password):
 
    failures = failures / 100.0
 
@@ -158,12 +174,16 @@ def simulate(stream,group,wait_period,failures):
          return True
 
    # we need something to simular tasks. This will wait a random number of seconds.
-   waiter = RandomWait(stream,group)
+   waiter = RandomWait(stream,group,host=host,port=port,username=username,password=password)
    waiter.listen()
 
 @cli.command('receipts')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
-def receipts(stream):
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+def receipts(stream,host,port,username,password):
 
    class ReceiptLog:
       def log(self,connection,id,receipt,target_id,target):
@@ -171,7 +191,7 @@ def receipts(stream):
          return True
 
    logger = ReceiptLog()
-   receipts = ReceiptListener(stream,logger=logger)
+   receipts = ReceiptListener(stream,logger=logger,host=host,port=port,username=username,password=password)
    receipts.listen()
 
 def format_vector(v):
@@ -185,9 +205,13 @@ def format_vector(v):
 
 @cli.command('inspect')
 @click.option('--all',is_flag=True)
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
 @click.argument('workflow_id')
-def adjust(all,workflow_id):
-   client = redis.Redis(host=os.environ.get('REDIS_SERVER','0.0.0.0'),port=int(os.environ.get('REDIS_PORT',6379)),username=os.environ.get('REDIS_USER'),password=os.environ.get('REDIS_PASSWORD'))
+def adjust(all,host,port,username,password,workflow_id):
+   client = redis.Redis(host=host,port=port,username=username,password=password)
    key = 'workflow:'+workflow_id
    for name in ['A','S']:
       if all:
