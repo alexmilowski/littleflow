@@ -9,6 +9,9 @@ commonLabels:
 bases:
 - ../archive-run
 
+resources:
+- service.yaml
+
 patches:
 - path: api.yaml
 
