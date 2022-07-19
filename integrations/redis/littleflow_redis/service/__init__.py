@@ -3,7 +3,6 @@ import os
 
 from .service import Config, service
 
-
 __configured__ = None
 if 'SERVICE_CONFIG' in os.environ and __configured__ is None:
    config_value = os.environ['SERVICE_CONFIG']
