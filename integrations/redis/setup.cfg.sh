@@ -22,6 +22,6 @@ install_requires =
 ${REQUIRES}
 
 [options.package_data]
-* = *.json, *.yaml
+* = *.json, *.yaml, *.html, *.js, *.css
 
 EOF
