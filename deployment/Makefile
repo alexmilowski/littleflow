@@ -22,7 +22,7 @@ all:
 	@echo "Shiv: ${ARCHIVE}"
 
 local-build:
-	shiv -o ${ARCHIVE} -e littleflow_redis:main .. ../integrations/redis
+	shiv -o ${ARCHIVE} -e littleflow_redis:main .. ../integrations/redis gunicorn
 
 
 make-build:
