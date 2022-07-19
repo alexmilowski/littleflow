@@ -7,4 +7,6 @@ spec:
     spec:
       containers:
       - name: worker
-        args: ["/app/$(ARCHIVE)"]
+        args: ["/app/$(ARCHIVE)","-w","2","-b","0.0.0.0:5000","littleflow_redis.service:service"]
+        ports:
+          - containerPort: 5000

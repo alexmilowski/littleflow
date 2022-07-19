@@ -26,4 +26,4 @@ patchesJSON6902:
       path: /spec/template/spec/containers/0/env/-
       value:
         name: SHIV_ENTRY_POINT
-        value: littleflow_redis.service:main
+        value: gunicorn.app.wsgiapp:run
