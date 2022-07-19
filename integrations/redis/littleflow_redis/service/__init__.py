@@ -2,6 +2,7 @@ import sys
 import os
 
 from .service import Config, service
+from .cli import main
 
 __configured__ = None
 if 'SERVICE_CONFIG' in os.environ and __configured__ is None:
