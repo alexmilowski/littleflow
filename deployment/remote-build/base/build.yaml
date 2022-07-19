@@ -57,6 +57,11 @@ spec:
             configMapKeyRef:
               name: config
               key: path
+        - name: ARCH
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: arch
         command: ["/bin/bash","-lc"]
         args:
         - |-
@@ -68,7 +73,7 @@ spec:
           cd littleflow;
           export VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('setup.cfg'); print(p['metadata']['version'])"`;
           export REDIS_VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('integrations/redis/setup.cfg'); print(p['metadata']['version'])"`;
-          export ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}.pyz;
+          export ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}-${ARCH}.pyz;
           pip install shiv boto3;
           echo "";
           echo "Building ${ARCHIVE}";
