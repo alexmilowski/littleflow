@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: -console
+
+commonLabels:
+  app: littleflow
+  role: console
+
+bases:
+- ../archive-run
+
+patches:
+- path: console.yaml
+
+patchesJSON6902:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: littleflow
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SHIV_ENTRY_POINT
+        value: littleflow_redis.console:main
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SERVICE_CONFIG
+        value: app.K8sConfig
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: PYTHONPATH
+        value: /app

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: littleflow
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: config
+        image: python:3.10
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE
+          value: http://littleflow-api.$(NAMESPACE).svc.cluster.local:5000/
+        command: ["/bin/bash","-c"]
+        args:
+        - |-
+          set -e;
+          echo "from littleflow_redis.console import Config" >> /app/app.py;
+          echo "class K8sConfig(Config):" >> /app/app.py;
+          echo "   API='${SERVICE}'" >> /app/app.py
+        volumeMounts:
+        - name: app
+          mountPath: /app
+      containers:
+      - name: worker
+        args: ["/app/$(ARCHIVE)"]
