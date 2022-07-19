@@ -35,13 +35,17 @@ spec:
             configMapKeyRef:
               name: config
               key: archive
-        command: ["/bin/bash","-c"]
+        command: ["/bin/bash","-lc"]
         args:
         - |-
           set -e;
           echo "Downloading s3://${BUCKET}/${BUCKET_PATH}/${ARCHIVE} to /app/${ARCHIVE}";
           pip install boto3;
-          python -c "import boto3; s3 = boto3.client('s3'); s3.download_file('${BUCKET}','${BUCKET_PATH}${ARCHIVE}','/app/${ARCHIVE}')"
+          python -c "import boto3; s3 = boto3.client('s3'); s3.download_file('${BUCKET}','${BUCKET_PATH}${ARCHIVE}','/app/${ARCHIVE}')";
+          echo '#!/bin/bash -l' >> /app/run.sh;
+          echo 'cd /app' >> /app/run.sh;
+          echo '/usr/local/bin/python $*' >> /app/run.sh;
+          chmod +x /app/run.sh
         volumeMounts:
         - name: app
           mountPath: /app
@@ -76,7 +80,7 @@ spec:
             configMapKeyRef:
               name: config
               key: archive
-        command: ["/usr/local/bin/python"]
+        command: ["/app/run.sh"]
         args: ["/app/$(ARCHIVE)", "receipts"]
         volumeMounts:
         - name: app
