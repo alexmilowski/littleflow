@@ -17,7 +17,7 @@ if 'SERVICE_CONFIG' in os.environ and __configured__ is None:
       m = __import__(modulename)
       if not hasattr(m,classname):
          print(f'Module {modulename} does not have a class named {classname}',file=sys.stderr)
-         print(f'Module {modulename} contains:',file=sys.stderr)
+         print(f'Module {modulename} from {m.__file__} contains:',file=sys.stderr)
          print('\n'.join(dir(m)),file=sys.stderr,flush=True)
          sys.exit(1)
       config = getattr(m,classname)()
