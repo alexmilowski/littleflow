@@ -17,6 +17,11 @@ url = https://github.com/alexmilowski/littleflow
 [options]
 packages =
    littleflow_redis
+   littleflow_redis.console
+   littleflow_redis.console.assets.css
+   littleflow_redis.console.assets.js
+   littleflow_redis.console.templates
+   littleflow_redis.service
 include_package_data = True
 install_requires =
 ${REQUIRES}
