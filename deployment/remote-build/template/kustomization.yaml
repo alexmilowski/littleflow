@@ -1,10 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: build
-nameSuffix: -mybuild
+namespace: {NAMESPACE}
+nameSuffix: -{SUFFIX}
 
 bases:
-- ../base
+- ../remote-build/base
 
 configMapGenerator:
   - name: config
@@ -13,3 +13,6 @@ configMapGenerator:
 secretGenerator:
 - name: storage
   env: storage.properties
+
+patches:
+- path: arch.yaml
