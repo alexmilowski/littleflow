@@ -17,7 +17,6 @@ from littleflow_redis import load_workflow, compute_vector, trace_vector, workfl
 from littleflow import graph
 
 class Config:
-   REDIS_SERVICE = '0.0.0.0:6379'
    WORKFLOWS_STREAM = 'workflows:run'
    WORKFLOWS_KEY = 'workflows:all'
    INPROGRESS_KEY = 'workflows:inprogress'
