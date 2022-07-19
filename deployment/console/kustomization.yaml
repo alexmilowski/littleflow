@@ -9,6 +9,9 @@ commonLabels:
 bases:
 - ../archive-run
 
+resources:
+- service.yaml
+
 patches:
 - path: console.yaml
 
@@ -23,12 +26,12 @@ patchesJSON6902:
       path: /spec/template/spec/containers/0/env/-
       value:
         name: SHIV_ENTRY_POINT
-        value: littleflow_redis.console:main
+        value: gunicorn.app.wsgiapp:run
     - op: add
       path: /spec/template/spec/containers/0/env/-
       value:
         name: SERVICE_CONFIG
-        value: app.K8sConfig
+        value: console_config.K8sConfig
     - op: add
       path: /spec/template/spec/containers/0/env/-
       value:

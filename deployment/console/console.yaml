@@ -20,12 +20,15 @@ spec:
         args:
         - |-
           set -e;
-          echo "from littleflow_redis.console import Config" >> /app/app.py;
-          echo "class K8sConfig(Config):" >> /app/app.py;
-          echo "   API='${SERVICE}'" >> /app/app.py
+          export MODULE_DIR=/app/console_config;
+          mkdir ${MODULE_DIR};
+          echo "class K8sConfig:" >> ${MODULE_DIR}/__init__.py;
+          echo "   API='${SERVICE}'" >> ${MODULE_DIR}/__init__.py;
         volumeMounts:
         - name: app
           mountPath: /app
       containers:
       - name: worker
-        args: ["/app/$(ARCHIVE)"]
+        args: ["/app/$(ARCHIVE)","-w","2","-b","0.0.0.0:8000","littleflow_redis.console:service"]
+        ports:
+          - containerPort: 8000
