@@ -101,4 +101,6 @@ Then deploy the receiptlog and lifecycle workers:
 ```
 kubectl apply -k test-deploy/lifecycle
 kubectl apply -k test-deploy/receiptlog
+kubectl apply -k test-deploy/api
+kubectl apply -k test-deploy/console
 ```
