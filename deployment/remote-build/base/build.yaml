@@ -78,7 +78,7 @@ spec:
           echo "";
           echo "Building ${ARCHIVE}";
           echo "";
-          shiv -o ${ARCHIVE} -e littleflow_redis:main . integrations/redis;
+          shiv -o ${ARCHIVE} -e littleflow_redis:main . integrations/redis gunicorn;
           echo "";
           echo "Uploading ${ARCHIVE} to s3://${BUCKET}/${BUCKET_PATH}${ARCHIVE}";
           python -c "import boto3; s3 = boto3.client('s3'); s3.upload_file('${ARCHIVE}','${BUCKET}','${BUCKET_PATH}${ARCHIVE}')"
