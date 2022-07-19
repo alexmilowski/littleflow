@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: littlflow-redis
+spec:
+  template:
+    spec:
+      serviceAccountName: build
+      restartPolicy: Never
+      containers:
+      - name: build
+        image: python:3.10
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: 10Gi
+            cpu: 1
+          limits:
+            memory: 64Gi
+            cpu: 2
+        volumeMounts:
+        - name: build
+          mountPath: /build
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: storage
+              key: access_key
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: storage
+              key: secret_access_key
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: storage
+              key: session_token
+        - name: REPO
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: repo_url
+        - name: BRANCH
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: branch
+        - name: BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: bucket
+        - name: BUCKET_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: path
+        command: ["/bin/bash","-lc"]
+        args:
+        - |-
+          set -e;
+          cd /build;
+          echo "Cloning ${REPO}";
+          echo "";
+          /usr/bin/git clone -b ${BRANCH} ${REPO} littleflow;
+          cd littleflow;
+          export VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('setup.cfg'); print(p['metadata']['version'])"`;
+          export REDIS_VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('integrations/redis/setup.cfg'); print(p['metadata']['version'])"`;
+          export ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}.pyz;
+          pip install shiv boto3;
+          echo "";
+          echo "Building ${ARCHIVE}";
+          echo "";
+          shiv -o ${ARCHIVE} -e littleflow_redis:main . integrations/redis;
+          echo "";
+          echo "Uploading ${ARCHIVE} to s3://${BUCKET}/${BUCKET_PATH}${ARCHIVE}";
+          python -c "import boto3; s3 = boto3.client('s3'); s3.upload_file('${ARCHIVE}','${BUCKET}','${BUCKET_PATH}${ARCHIVE}')"
+      volumes:
+      - name: build
+        emptyDir: {}
+  backoffLimit: 0
