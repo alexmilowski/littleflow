@@ -41,3 +41,5 @@ make-deploy:
 	NAMESPACE=${NAMESPACE} DIR=receiptlog python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/receiptlog/kustomization.yaml
 	mkdir -p ${NAME}/lifecycle
 	NAMESPACE=${NAMESPACE} DIR=lifecycle python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/lifecycle/kustomization.yaml
+	mkdir -p ${NAME}/api
+	NAMESPACE=${NAMESPACE} DIR=api python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/api/kustomization.yaml
