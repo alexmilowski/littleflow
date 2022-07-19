@@ -10,6 +10,13 @@ NAMESPACE=littleflow
 BUILD_NAMESPACE=build
 BUILD_SUFFIX=build
 ARCH=amd64
+VERSION=0.8.0
+REDIS_VERSION=0.4.0
+REDIS_HOST=redis-primary.data.svc.cluster.local
+REDIS_PORT=6379
+REDIS_USERNAME=default
+REDIS_PASSWORD=
+
 
 all:
 	@echo "Littleflow: ${LF_VERSION}"
@@ -26,3 +33,13 @@ make-build:
 	REPO_URL=${REPO_URL} BRANCH=${BRANCH} BUCKET=${BUCKET} BUCKET_PATH=${BUCKET_PATH} ARCH=${ARCH} python -c "import json, os; s=open('remote-build/template/config.properties').read(); print(s.format(**os.environ))" > ${NAME}/config.properties
 	NAMESPACE=${BUILD_NAMESPACE} SUFFIX=${BUILD_SUFFIX}-${ARCH} python -c "import os; s=open('remote-build/template/kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/kustomization.yaml
 	ARCH=${ARCH} python -c "import os; s=open('remote-build/template/arch.yaml').read(); print(s.format(**os.environ))" > ${NAME}/arch.yaml
+
+make-site-config:
+	mkdir -p ${NAME}/site
+	BUCKET=${BUCKET} BUCKET_PATH=${BUCKET_PATH} ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}-${ARCH}.pyz REDIS_HOST=${REDIS_HOST} REDIS_PORT=${REDIS_PORT} python -c "import os; [print(name+'='+os.environ.get(env_name,'')) for name,env_name in [('bucket','BUCKET'),('path','BUCKET_PATH'),('archive','ARCHIVE'),('redis_host','REDIS_HOST'),('redis_port','REDIS_PORT')]]" > ${NAME}/site/config.properties
+	REDIS_USERNAME=${REDIS_USERNAME} REDIS_PASSWORD=${REDIS_PASSWORD} python -c "import os; [print(name+'='+os.environ.get(env_name,'')) for name,env_name in [('username','REDIS_USERNAME'),('password','REDIS_PASSWORD')]]" > ${NAME}/site/redis.properties
+	cp site-kustomization.yaml ${NAME}/site/kustomization.yaml
+	mkdir -p ${NAME}/receiptlog
+	DIR=receiptlog python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/receiptlog/kustomization.yaml
+	mkdir -p ${NAME}/lifecycle
+	DIR=lifecycle python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/lifecycle/kustomization.yaml
