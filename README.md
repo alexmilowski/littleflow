@@ -1,10 +1,14 @@
 # littleflow
 
-A flow language
+A little flow language with simple objectives:
+
+ * an expression language for defining the flow of tasks
+ * a core algorithm for invocation of workflows and tasks
+ * flows are independent of task implementation or workflow deployments
 
 ## Getting started
 
-This simple example can compile and run a workflow:
+In this example we can compile and run a workflow:
 
 ```python
 from littleflow import Parser, Compiler, Context, Runner
@@ -62,8 +66,11 @@ run_workflow(workflow,locals())
 
 ```
 
+Tasks are ordered by execution invocation. While some may be run in parallel,
+this relative to task invocation innovation.
+
 Typically, a real usage would implement both the `start()` and `end()` methods
-on `FlowContext` that will start tasks and notify when these tasks end. Also, theAt the end,
+on `FlowContext` that will start tasks and notify when these tasks end. Also, at task ends,
 the loop for execution would likely be asynchronous based on end task event
 notification.
 
@@ -78,3 +85,7 @@ These workflows are compiled into a graph that can be executed asynchronously. T
 state of the workflow is stored in a few simply vectors. This allows a simple
 stateless library to executed a workflow once those vectors are restored from
 storage.
+
+## Deployment
+
+Littleflow is integrated with Redis and Kubernetes for distributed execution. See [deployment](deployment) for more information.
