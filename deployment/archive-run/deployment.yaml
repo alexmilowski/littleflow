@@ -1,21 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: littleflow-receiptlog
+  name: littleflow
   labels:
     app: littleflow
-    role: receiptlog
 spec:
   selector:
     matchLabels:
       app: littleflow
-      role: receiptlog
   replicas: 1
   template:
     metadata:
       labels:
         app: littleflow
-        role: receiptlog
     spec:
       serviceAccountName: littleflow
       initContainers:
