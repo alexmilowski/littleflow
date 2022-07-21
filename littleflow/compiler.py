@@ -3,7 +3,7 @@ import json
 import yaml
 
 from .model import Workflow, SubFlow, Task, LiteralSource, Start, End, LiteralType
-from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow
+from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow, StartFlow
 
 def compile_literal(text,type=LiteralType.EMPTY):
    if type==LiteralType.EMPTY:
@@ -88,7 +88,7 @@ class Compiler:
          elif isinstance(step,SubFlow):
             flow[index] = InvokeFlow(index,merge=step.merge)
          elif isinstance(step,Start):
-            flow[index] = Source(index,{})
+            flow[index] = StartFlow(index)
          elif isinstance(step,End):
             flow[index] = Sink(index)
          else:

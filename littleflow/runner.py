@@ -2,7 +2,7 @@ from queue import SimpleQueue
 import types
 
 import numpy as np
-from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow
+from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow, StartFlow
 
 class InputCache:
 
@@ -217,6 +217,8 @@ class Context:
                   input = merge(input)
                self.output_for(index,input)
                immediate[index] = 1
+            elif isinstance(invocation,StartFlow):
+               self.output_for(index,input)
             else:
                immediate[index] = 1
 
@@ -262,7 +264,9 @@ class Runner:
    def __init__(self):
       pass
 
-   def start(self,context):
+   def start(self,context,input=None):
+      if input is not None:
+         context.append_input_for(-1,0,input)
       context.A[0] = 1
       context.ending.put(context.new_transition())
       context.accumulate(context.A)

@@ -12,6 +12,10 @@ class Source(Invocation):
    value : 'typing.Any'
 
 @dataclass
+class StartFlow(Invocation):
+   pass
+
+@dataclass
 class Sink(Invocation):
    merge: bool = False
    pass
