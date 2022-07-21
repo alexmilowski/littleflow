@@ -4,6 +4,7 @@ import threading
 from time import sleep
 from random import random
 import signal
+import json
 
 import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
@@ -28,11 +29,19 @@ def cli():
 @click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+@click.option('--input',help='The workflow input')
 @click.argument('workflow')
-def run(stream,workflow_id,wait,host,port,username,password,workflow):
+def run(stream,workflow_id,wait,host,port,username,password,workflow,input):
 
    with open(workflow,'r') as data:
       workflow_spec = data.read()
+
+   if input is not None:
+      if input[0]=='@':
+         with open(input[1:],'r') as data:
+            input = json.load(data)
+      else:
+         input = json.loads(input)
 
    stopper = None
    if wait:
@@ -60,7 +69,7 @@ def run(stream,workflow_id,wait,host,port,username,password,workflow):
 
    # run the workflow
    client = EventClient(stream,host=host,port=port,username=username,password=password)
-   workflow_id = run_workflow(workflow_spec,client,workflow_id=workflow_id)
+   workflow_id = run_workflow(workflow_spec,client,workflow_id=workflow_id,input=input)
 
    print_id = workflow_id[9:] if workflow_id.startswith('workflow:') else workflow_id
    print(f'workflow {print_id} is running')
@@ -127,11 +136,18 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
 @click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+@click.option('--data',help='The event data')
 @click.argument('event')
-def event(stream,host,port,username,password,event):
+def event(stream,host,port,username,password,data,event):
    client = EventClient(stream,host=host,port=port,username=username,password=password)
-   # TODO: add option for data
-   data = {}
+   if data is None:
+      data = {}
+   else:
+      if data[0]=='@':
+         with open(data[1:],'r') as raw:
+            data = json.load(raw)
+      else:
+         data = json.loads(data)
    client.append(message(data,kind=event))
 
 @cli.command('simulate')
