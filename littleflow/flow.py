@@ -18,7 +18,6 @@ class StartFlow(Invocation):
 @dataclass
 class Sink(Invocation):
    merge: bool = False
-   pass
 
 @dataclass
 class InvokeTask(Invocation):
@@ -30,7 +29,6 @@ class InvokeTask(Invocation):
 @dataclass
 class InvokeFlow(Invocation):
    merge: bool = False
-   pass
 
 
 class Flow:
@@ -39,7 +37,8 @@ class Flow:
       'Source' : Source,
       'Sink' : Sink,
       'InvokeTask' : InvokeTask,
-      'InvokeFlow' : InvokeFlow
+      'InvokeFlow' : InvokeFlow,
+      'StartFlow' : StartFlow
    }
 
    def __init__(self,size=0,serialized=None,name=None):
