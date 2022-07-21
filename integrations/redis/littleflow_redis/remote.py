@@ -200,7 +200,7 @@ def load_workflow_state(event_client,key,workflow_id):
    context = RedisContext(flow,event_client,key,workflow_id,state=S,activation=A,cache=RedisInputCache(client,key),task_context=remote_context)
    return context
 
-def run_workflow(workflow,event_client,workflow_id=None,prefix=''):
+def run_workflow(workflow,event_client,input=None,workflow_id=None,prefix=''):
    p = Parser()
    c = Compiler()
    model = p.parse(workflow)
@@ -226,7 +226,7 @@ def run_workflow(workflow,event_client,workflow_id=None,prefix=''):
    event_client.append(message({'workflow':workflow_id},kind='start-workflow'))
 
    runner = Runner()
-   runner.start(context)
+   runner.start(context,input=input)
 
    while not context.ending.empty():
       runner.next(context,context.ending.get())
