@@ -363,10 +363,20 @@ def restore_workflow_from_archive():
 
 @service.route('/workflows/start',methods=['POST'])
 def start_workflow_post():
-   workflow = request.data
+   if request.mimetype=='application/json':
+      data = request.json
+      workflow = data.get('workflow')
+      input = data.get('input')
+   else:
+      workflow = request.data
+      input = None
+
+   if workflow is None or len(workflow)==0:
+      return error(f'No workflow was provided'), 400
+
    event_client = get_event_client()
    try:
-      workflow_id = run_workflow(workflow,event_client)
+      workflow_id = run_workflow(workflow,event_client,input=input)
       return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
    except Exception as ex:
       return error(f'Cannot compile workflow due to: {ex}'), 400
@@ -377,9 +387,12 @@ def start_workflow_upload():
       return error('The workflow was not attached.'), 400
    file = request.files['workflow']
    workflow = file.read().decode('UTF-8')
+   input = request.form.get('input')
+   if input is not None:
+      input = json.loads(input)
    event_client = get_event_client()
    try:
-      workflow_id = run_workflow(workflow,event_client)
+      workflow_id = run_workflow(workflow,event_client,input=input)
       _, _, workflow_id = workflow_id.partition(':')
       return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
    except Exception as ex:
