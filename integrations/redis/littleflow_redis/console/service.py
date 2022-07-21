@@ -50,6 +50,8 @@ def device_status_proxy(path):
          files = {}
          for key in request.files:
             files[key] = request.files[key].read()
+         for key, value in request.form:
+            files[key] = value
          response = requests.post(url,files=files)
       else:
          response = requests.post(url,data=request.data,headers=headers)
