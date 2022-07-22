@@ -357,7 +357,7 @@ def terminate_workflow(event_client,key,workflow_id,inprogress_key=None):
 def delete_workflow(client,key,workflows_key=None):
    size = -1
    try:
-      flow = load_workflow(client,key):
+      flow = load_workflow(client,key)
       size = flow.F.shape[0]
    except IOError as ex:
       pass
