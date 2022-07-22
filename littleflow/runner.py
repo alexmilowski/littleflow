@@ -4,44 +4,6 @@ import types
 import numpy as np
 from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow, StartFlow
 
-class InputCache:
-
-   def append_input_for(self,source,target,value):
-      pass
-
-   def input_for(self,index):
-      return {}
-
-class MemoryInputCache(InputCache):
-
-   def __init__(self):
-      self._cache = {}
-
-   def append_input_for(self,source,target,value):
-      input = self._cache.get(target)
-      if input is None:
-         self._cache[target] = value
-      elif type(input)==dict:
-         if len(input)==0:
-            self._cache[target] = value
-         else:
-            if type(value)==list:
-               self._cache[target] = [input] + value
-            else:
-               self._cache[target] = [input,value]
-      else:
-         if type(value)==list:
-            input.extend(value)
-         else:
-            input.append(value)
-
-   def input_for(self,index):
-      input = self._cache.get(index)
-      if input is not None:
-         del self._cache[index]
-         return input
-      return {}
-
 class TaskContext:
 
    def invoke(self,context,invocation,input):
@@ -101,7 +63,7 @@ class FunctionTaskContext(TaskContext):
 
 def merge(input):
    if type(input)!=list:
-      return
+      return input
    result = {}
    for item in input:
       if type(item)!=dict:
@@ -111,16 +73,12 @@ def merge(input):
    return result
 
 class Context:
-   def __init__(self,flow,state=None,activation=None,cache=MemoryInputCache(),task_context=TaskContext()):
+   def __init__(self,flow,state=None,activation=None,cache={},task_context=TaskContext()):
       self._flow = flow
       self._A = activation if activation is not None else np.zeros((self.F.shape[0],1),dtype=int)
       self._T = flow.F.sum(axis=0)
       self._T[0] = 1
       self._T = self._T.reshape((self.F.shape[0],1))
-      # self._initial = np.zeros((self.F.shape[0],1),dtype=int)
-      # self._initial[0] = 1
-      # self._initial = self._initial>0
-      # TODO: do we really need to compute S?
       self._S = state if state is not None else np.zeros((self.F.shape[0],1),dtype=int)
       self._ends = SimpleQueue()
       self._cache = cache
@@ -134,13 +92,6 @@ class Context:
       """
       return self._flow
 
-   # @property
-   # def initial(self):
-   #    """
-   #    The start vector for the workflow
-   #    """
-   #    return self._initial
-   #
    @property
    def F(self):
       """
@@ -219,6 +170,7 @@ class Context:
                immediate[index] = 1
             elif isinstance(invocation,StartFlow):
                self.output_for(index,input)
+               immediate[index] = 1
             else:
                immediate[index] = 1
 
@@ -236,21 +188,30 @@ class Context:
       pass
 
    def output_for(self,index,value):
-      for target, transition in enumerate(self.F[index].flatten()):
-         if transition > 0:
-            self.append_input_for(index,target,value)
-      if index==(self.F.shape[0]-1):
-         self.ended(value)
-
-   def append_input_for(self,source,target,value):
       if value is None:
          return
       if type(value)!=list and type(value)!=dict:
          raise ValueError(f'The value of the input must be a list or dict: {type(value)}')
-      self._cache.append_input_for(source,target,value)
+      self._cache[index] = value
+      if index==(self.F.shape[0]-1):
+         self.ended(value)
 
    def input_for(self,index):
-      return self._cache.input_for(index)
+      if index == 0:
+         item = self._cache.get(-1)
+         return {} if item is None else item
+      value = []
+      for target, transition in enumerate(self.F.T[index].flatten()):
+         if transition > 0:
+            item = self._cache.get(target)
+            if item is not None:
+               value.append(item)
+      if len(value)==0:
+         return {}
+      elif len(value)==1:
+         return value[0]
+      else:
+         return value
 
    def start_task(self,invocation,input):
       self._task_context.invoke(self,invocation,input)
@@ -266,7 +227,7 @@ class Runner:
 
    def start(self,context,input=None):
       if input is not None:
-         context.append_input_for(-1,0,input)
+         context.output_for(-1,input)
       context.A[0] = 1
       context.ending.put(context.new_transition())
       context.accumulate(context.A)

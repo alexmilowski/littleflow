@@ -53,9 +53,11 @@ class LogContext(Context):
    def output_for(self,index,value):
       print(f'{index} → {value}')
       super().output_for(index,value)
-   def append_input_for(self,source,target,value):
-      print(f'{source} → {target}')
-      super().append_input_for(source,target,value)
+
+   def input_for(self,index):
+      value = super().input_for(index)
+      print(f'{value} → {index}')
+      return value
 
    def end(self,tasks):
       print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.T.flatten()))
@@ -74,20 +76,29 @@ class LogContext(Context):
 @cli.command()
 @click.option('--limit',type=int,default=-1,help='Iteration limit')
 @click.option('--show-cache',is_flag=True)
+@click.option('--input',help='The workflow input')
 @click.argument('workflow')
-def run(limit,show_cache,workflow):
+def run(limit,show_cache,input,workflow):
+
+   if input is not None:
+      if input[0]=='@':
+         with open(input[1:],'r') as data:
+            input = json.load(data)
+      else:
+         input = json.loads(input)
+
    p = Parser()
    c = Compiler()
    try:
-      with open(workflow,'r') as input:
-         model = p.parse(input)
+      with open(workflow,'r') as raw:
+         model = p.parse(raw)
          flow = c.compile(model)
    except FileNotFoundError as ex:
       print(f'Cannot open {file}',file=sys.stderr)
 
    runner = Runner()
    context = LogContext(flow)
-   runner.start(context)
+   runner.start(context,input)
    count = 0
    while (limit<0 or count<limit) and not context.ending.empty():
       count += 1
