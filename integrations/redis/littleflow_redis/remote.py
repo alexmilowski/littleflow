@@ -8,7 +8,7 @@ import numpy as np
 from littleflow import Parser, Compiler, Runner, Context, FunctionTaskContext, Flow
 from rqse import EventClient, EventListener, message, receipt_for
 
-from .context import RedisInputCache
+from .context import RedisOutputCache
 
 def tstamp():
    return datetime.now(timezone.utc).isoformat()
@@ -197,7 +197,7 @@ def load_workflow_state(event_client,key,workflow_id):
    flow = load_workflow(client,key)
    S = compute_vector(client,key+':S')
    A = compute_vector(client,key+':A')
-   context = RedisContext(flow,event_client,key,workflow_id,state=S,activation=A,cache=RedisInputCache(client,key),task_context=remote_context)
+   context = RedisContext(flow,event_client,key,workflow_id,state=S,activation=A,cache=RedisOutputCache(client,key),task_context=remote_context)
    return context
 
 def run_workflow(workflow,event_client,input=None,workflow_id=None,prefix=''):
@@ -218,7 +218,7 @@ def run_workflow(workflow,event_client,input=None,workflow_id=None,prefix=''):
    redis_client.delete(key+':S')
 
    remote_context = RemoteTaskContext(event_client,workflow_id)
-   context = RedisContext(flow,event_client,key,workflow_id,cache=RedisInputCache(redis_client,key),task_context=remote_context)
+   context = RedisContext(flow,event_client,key,workflow_id,cache=RedisOutputCache(redis_client,key),task_context=remote_context)
 
    save_workflow(redis_client,flow,key)
    set_workflow_state(redis_client,key,'RUNNING')

@@ -4,13 +4,16 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from rqse import EventListener, message, receipt_for
+from littleflow import merge
+
+from .context import RedisOutputCache
 
 @dataclass
 class TaskInfo:
    workflow_id : str
    index : int
    name : str
-   parameters : 'typing.Any' = None
+   input : 'typing.Any' = None
 
 class WaitForEventListener(EventListener):
    def __init__(self,key,parent,info,event_name,send_receipt=True,match={},host='0.0.0.0',port=6379,username=None,password=None,pool=None):
@@ -43,12 +46,30 @@ class WaitForEventListener(EventListener):
       return True
 
    def process(self,event_id, event):
+
+      # check to make sure the event type matches
       if not self.matches(event):
          return False
+
+      # send a receipt for the event
       if self._send_receipt:
          self.append(receipt_for(event_id))
+
+      # cache the output of the wait
+      output = event.get('output')
+      if output is None:
+         output = self._info.input
+      else:
+         output = merge([self._match,output])
+      if output is not None:
+         cache = RedisOutputCache(self.connection,self._info.workflow_id)
+         cache[self._info.index] = output
+
+      # Generate the end task
       event = {'name':self._info.name,'index':self._info.index,'workflow':self._info.workflow_id}
       self.append(message(event,kind='end-task'))
+
+      # end the wait
       self.stop()
       if not self.parent.stop_work(self):
          print('Cannot remove wait_for thread.')
@@ -80,6 +101,9 @@ class Delay:
 
    def run(self):
       self._wait.wait(self._delay)
+      if self._info.input is not None:
+         cache = RedisOutputCache(self.connection,self._info.workflow_id)
+         cache[self._info.index] = self._info.input
       event = {'name':self._info.name,'index':self._info.index,'workflow':self._info.workflow_id}
       self.parent.append(message(event,kind='end-task'))
       self.stop()

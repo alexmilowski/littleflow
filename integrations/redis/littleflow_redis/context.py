@@ -1,56 +1,33 @@
 import json
-from littleflow import InputCache
 
-class RedisInputCache(InputCache):
+class RedisOutputCache:
+
    def __init__(self,client,prefix):
       self._client = client
       self._prefix = prefix
 
-   def append_input_for(self,source,target,value):
-      if value is None or (type(value)==dict and len(value)==0):
-         return
-      key = f'{self._prefix}:input:{target}'
+   def get(self,index,default=None):
+      key = f'{self._prefix}:output:{index}'
 
       # retrieve current value
-      current = self._client.get(key)
+      value = self._client.get(key)
 
-      # if there is no current value, set to the value
-      if current is None:
-         assert type(value)==dict, "Non-dictionary value set as input"
-         self._client.set(key,json.dumps(value))
-      else:
-         # if there is a current value, decode
-         current = json.loads(current.decode('UTF-8'))
+      if value is None:
+         return default
 
-         # if a dictionary, convert to a list
-         if type(current)==dict:
-            if type(value)==list:
-               current = [current] + value
-            else:
-               current = [current,value]
-            current = [current,value]
-         else:
-            assert type(current)==list, 'Non-array value retrieved from Redis'
-            if type(value)==list:
-               current.extend(value)
-            else:
-               current.append(value)
-
-         # commit new value
-         self._client.set(key,json.dumps(current))
-
-   def input_for(self,index):
-      key = f'{self._prefix}:input:{index}'
-      current = self._client.get(key)
-
-      # No value means empty
-      if current is None:
-         return {}
-
-      # decode valeu
+      # if there is a current value, decode
       value = json.loads(current.decode('UTF-8'))
 
-      # delete key for consumption of value
-      self._client.delete(key)
-
       return value
+
+   def __getitem__(self,index):
+      value = self.get(value)
+      if value is None:
+         raise KeyError(index)
+      return value
+
+   def __setitem__(self,index,value):
+      if type(value)!=dict and type(value)!=list:
+         raise ValueError(f'Incompatible type {type(value)}')
+      key = f'{self._prefix}:output:{index}'
+      self._client.set(key,json.dumps(value))
