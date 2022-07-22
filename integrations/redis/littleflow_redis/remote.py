@@ -355,6 +355,12 @@ def terminate_workflow(event_client,key,workflow_id,inprogress_key=None):
    return terminated
 
 def delete_workflow(client,key,workflows_key=None):
+   size = -1
+   try:
+      flow = load_workflow(client,key):
+      size = flow.F.shape[0]
+   except IOError as ex:
+      pass
    client.delete(key)
    client.delete(key+':A')
    client.delete(key+':S')
@@ -362,3 +368,13 @@ def delete_workflow(client,key,workflows_key=None):
    client.delete(key+':FAILED')
    if workflows_key is not None:
       client.lrem(workflows_key,0,key)
+   client.delete(f'{key}:output:-1')
+   if size<0:
+      found = True:
+      index = 0
+      while found:
+         found = client.delete(f'{key}:output:{index}')>0
+         index += 1
+   else:
+      for index in range(size):
+         client.delete(f'{key}:output:{index}')
