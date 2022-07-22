@@ -16,7 +16,7 @@ class RedisOutputCache:
          return default
 
       # if there is a current value, decode
-      value = json.loads(current.decode('UTF-8'))
+      value = json.loads(value.decode('UTF-8'))
 
       return value
 
