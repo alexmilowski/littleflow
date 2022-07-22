@@ -370,7 +370,7 @@ def delete_workflow(client,key,workflows_key=None):
       client.lrem(workflows_key,0,key)
    client.delete(f'{key}:output:-1')
    if size<0:
-      found = True:
+      found = True
       index = 0
       while found:
          found = client.delete(f'{key}:output:{index}')>0
