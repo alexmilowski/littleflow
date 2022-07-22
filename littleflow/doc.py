@@ -1,11 +1,11 @@
-from .flow import Source, Sink, InvokeTask, InvokeFlow
+from .flow import StartFlow, Source, Sink, InvokeTask, InvokeFlow
 
 def mangle(name):
    return name.replace(':','_COLON_').replace('-','_HYPHEN_')
 def graph_name(obj,end=-1):
    if isinstance(obj,InvokeTask):
       return f'{mangle(obj.name)}.{obj.index}'
-   elif isinstance(obj,Source):
+   elif isinstance(obj,StartFlow):
       return '[*]'
    elif isinstance(obj,Sink):
       return '[*]' if obj.index==end else f'_end_{obj.index}_'
