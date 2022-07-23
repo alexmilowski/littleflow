@@ -21,24 +21,77 @@ With this definition, a few observations:
  * A workflow can consist of disconnected subgraphs
  * Cycles are allowed
 
-A workflow is performed over time. As such, a workflow generates a DAG of the trace of the execution. At each point in time that a task is performed, the instance of task as certain number of incoming edges from preceding tasks is followed by a certain number of following tasks. This is called the **execution trace**.
+As the edges are directed, each subgraph in the workflow has a maximal join that can be considered the starting point of the subgraph. In the diagram below, `A` and `E` are the start of each subgraph as they are the maximal joins:
 
-A workflow is a *flow* of information from task to the next. The preceding tasks have state and side effects. In actuality, a side effect is usually an artifact (e.g., a document or action taking in the "real world"). These side effects are typically the record and objective of the workflow; things that are the eventual outcome when finished.
+```mermaid
+stateDiagram-v2
+    A --> B
+    A --> C
+    C --> D
+    E --> F
+    E --> G
+```
 
-The state is something specific to the workflow being execute. Between tasks there is information, metadata, that can be passed along. This metadata may be important and dictate how subsequent task operate and the cardinality of the
-operations they perform.
+Given the maximal elements, we can infer a start and end to the workflow from the subgraphs:
+
+```mermaid
+stateDiagram-v2
+    [*] --> A
+    A --> B
+    B --> [*]
+    A --> C
+    C --> D
+    D --> [*]
+    [*] --> E
+    E --> F
+    E --> G
+    F --> [*]
+    G --> [*]
+```
+
+A workflow is a *flow* of information from task to the next. The workflow has a single input that is passes to each starting tasks. These tasks may produce a single output. This output
+flows over the edge connecting two tasks.
+
+For example, in the following workflow, task `A` receives the workflow input and
+produces its output. That output is fed into tasks `B` and `C` and the output of task `C` is fed into task `D`. At the end, the meet of tasks `B` and `D` in the workflow, the final output of the workflow is the collection of the output of tasks `B` and `D` (e.g., a list containing the two outputs).
+
+```mermaid
+stateDiagram-v2
+    [*] --> A
+    A --> B
+    B --> [*]
+    A --> C
+    C --> D
+    D --> [*]
+```
+
+
+**The purpose of the inputs and outputs are to provide tasks with execution context.** Typically,
+this is not the main purpose of the workflow but information (e.g., metadata) needed to
+locate information in the environemtn. For example, the input to the pipeline might be
+a reference to customer record or data object sufficient for the workflow tasks to
+retrieve information from a database.
+
+As long as tasks pass the context along, possibly enhancing the context with additional information, the following tasks will have sufficient information to proceed. This enables the construction of workflows that are more generic. That is, instead of specializing a workflow with parameters specific to the invocation, the context for the invocation is the input to the workflow.
 
 As such, over the edge flows information. Each task receives inputs over incoming edges and outputs information over outgoing edges. This information provides subsequent tasks the ability to evaluate what and whether they can perform their own task.
 
 ## What are tasks?
 
+A task follows these rules:
+
+ * may consume a single input and produce a single output.
+ * may have side effects in the execution environment. That is, it does not have to be completely functional
+ * may have additional parameters
+
 While conceptually a task can be anything:
 
- * a computational task over the inputs and product outputs without side-effects
- * a process whose arguments are the inputs, affect the state of the world by producing some number of artifacts, and producing metadata over its outputs
- * a invocation of the "real world" affect the state of objects, interacting with people, and generating artifacts or metadata over task outputs
+ * a function that receipts instructions via the input and parameters and product outputs without side-effects
+ * an external process whose arguments a combination of the parameters and the input that affects the state of the world (e.g., by producing some number of artifacts)
+ * an invocation of a service via an API
+ * interaction with a person or intelligent device (e.g., a robot)
 
-Concretely, a task is invoked by a workflow engine that feeds the task various inputs and receives various outputs. Once complete, the engine determines the next step in computation and feeds outputs to inputs. That is, tasks are "black boxes" with metadata inputs and outputs.
+Concretely, a task is invoked by a workflow engine that feeds the task its context (i.e., parmaeters and input) and receives an output. Once complete, the engine determines the next step in computation and feeds outputs to inputs. Tasks are "black boxes" with metadata, an input, and an output.
 
 ## Technical foundation
 
@@ -48,6 +101,7 @@ A flow represents a workflow as a graph that:
  1. Edges are directed.
  1. An edge from A to B means that A occurs before B.
  1. Two distinct nodes A and B are only connected by one edge from A to B.
+ 1. Nodes in the graph may have the same label. This means they are the same task but in a different invocation context.
 
 A sequence of structured information flows between nodes over directed edges. A task may choose how to interpret such information from all incoming edges.
 
@@ -55,15 +109,16 @@ Information flowing between tasks is limited to tree-structured information that
 
 A task:
 
- * receives inputs, possibly empty, over incoming edges
- * produces outputs, possibly empty, over outgoing edges
+ * receives a sequence of input data, possibly empty, over incoming edges
+ * produces a single output, possibly empty, over outgoing edges
  * may create side-effects
 
 A *side effect* is typically an artifact or change in state of the world. For example, a task may write data to database, notify a user, or invoke actions in the physical world.
 
-Within the workflow itself, only the data flowing over the edges is explicitly know by each task. Task writers by choose to convey information via the data flow or via side effects.
+Within the workflow itself, only the data flowing over the edges is explicitly know by the workflow engine for each task. Task writers by choose to convey information via the data flow or via side effects. Any information outside of the inputs and outputs is out of scope for the workflow engine execution.
 
-A task in a workflow is not a replacement for a general purpose programming language. To avoid complexity, there is a single sequence of inputs and single sequence of outputs. Every connected task receives the same input sequence.
+A task in a workflow is not a replacement for a general purpose programming language. It
+is simply a representation of a task that is implemented in some language or system. The workflow engine must pass the input and any parameters to that system. When the task completes, the workflow engineer receives an output which can then be used for following tasks.
 
 ## A syntax for workflows
 
