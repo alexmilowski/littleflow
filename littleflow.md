@@ -639,7 +639,7 @@ where indentation is significant.  There is no preprocessing of the YAML literal
 between the start and end delimiters.
 
 
-## Resource literals
+### Resource literals
 
 Flows may also start with a literal:
 
@@ -655,7 +655,60 @@ For parameter literals:
 
 There is no preprocessing of the literal between the start and end delimiters.
 
-## Reserved words
+### Declarations
+
+A declaration provides metadata and defaults for the workflow. There are two
+kinds of declarations:
+
+ * flow declarations for the workflow itself
+ * task declarations for tasks
+
+Declarations are completely optional and only provide additional information such
+as documentation or parmaeter defaults.
+
+The general syntax is:
+
+```
+@type name (- ... -) ''' ... '''
+```
+
+where:
+
+ * `@type` is one of `@flow` or `@task`
+ * `name` is the name of the declared object (e.g., a task name)
+ * `(- ... -)` is an optional default parameter literal
+ * `''' ... '''` is an optional documentation comment which can use `'''` or `"""` as the delimiter and is also allowed to be mutliline.
+
+#### Flow declarations
+
+A flow delcaration provides the name and documentation for the worlflow. There can
+only be one flow declaration per workflow.
+
+```
+@flow test '''
+This is a test workflow.
+'''
+```
+
+The use of parameters is implemetation defined as it has no semantics in the
+flow language itself.
+
+#### Task declarations
+
+A task delcaration provides additional information about tasks.
+
+```
+@task A (- dry-run: false -) '''
+Task A has a single parameter of `dry-run` which is a boolean value.
+'''
+```
+
+The task parameters provided are the default values for the the task. An
+implementation must merge the task default paraemters with the parameters
+specified in the flow statements.
+
+
+### Reserved words
 
 A task may not have the following names:
 
@@ -664,7 +717,7 @@ A task may not have the following names:
  * else
  * elif
 
-## Reserved labels
+### Reserved labels
 
 A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the workflow) and `:end` must be the right-most task (the end of the workflow). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
 
