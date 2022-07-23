@@ -124,4 +124,11 @@ class Compiler:
                named = subflow.named_inputs.get('end')
                assert named is not None, 'The end destination is missing for the subflow'
                flow.F[current,named.index] = 1
+         # fixup for inputs and outputs within the flow
+         for name, source in subflow.named_outputs.items():
+            if name=='start':
+               continue
+            target = subflow.named_inputs.get(name)
+            if target is not None:
+               flow.F[source.index,target.index] = 1
       return flow
