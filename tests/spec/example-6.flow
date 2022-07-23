@@ -1,0 +1,2 @@
+:before → A → B → C
+D → :before
