@@ -160,12 +160,19 @@ C → D
 
 ```mermaid
 stateDiagram-v2
-    [*] --> A
-    A --> B
-    B --> D
-    [*] --> C
-    C --> D
-    D --> [*]
+  direction LR
+  state "A" as A.1
+  state "B" as B.2
+  state "D" as D.3
+  state "C" as C.4
+  state "D" as D.5
+  [*]-->A.1
+  [*]-->C.4
+  A.1-->B.2
+  B.2-->D.3
+  D.3-->[*]
+  C.4-->D.5
+  D.5-->[*]
 ```
 
 A flow statement may be terminated with a semicolon and may be necessary to
