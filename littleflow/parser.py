@@ -66,6 +66,13 @@ def iter_tree(top):
       for subtree in subtrees:
          context.append((True,subtree,[child for child in subtree.children if isinstance(child,Tree)]))
 
+def find_position(tree,target):
+   for item in tree.iter_subtrees():
+      for child in item.children:
+         if isinstance(child,Token):
+            target.line = child.line
+            target.column = child.column
+            return;
 class Parser:
 
    def __init__(self):
@@ -88,12 +95,19 @@ class Parser:
       media_tyope = None
       input_label = None
       output_label = None
+      source_labeled = False
+      last_step = None
       ancestors = []
 
       def realize_step(step):
+         nonlocal source_labeled, last_step
+         last_step = step
          if statement is not None:
             statement.steps.append(step)
          workflow.indexed.append(step)
+         if not source_labeled and statement.source is not None:
+            flow.named_inputs[statement.source] = step
+            source_labeled = True
          if input_label is not None:
             label = input_label.value[1:]
             if label in ['start','end']:
@@ -126,6 +140,9 @@ class Parser:
                else:
                   print(item)
                   assert False, f'{line}:{column} Unknown context for parameter literal'
+            elif item.data=='flow_statement':
+               if statement.destination is not None:
+                  flow.named_outputs[statement.destination] = last_step
 
             continue
 
@@ -161,7 +178,9 @@ class Parser:
             iterate = False
             step = None
             source = None
+            source_labeled = False
             statement = Statement()
+            find_position(item,statement)
             flow.statements.append(statement)
          elif item.data=='step':
             subject = None

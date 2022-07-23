@@ -75,6 +75,8 @@ class Statement:
    destination : str = None
    merge_destination : bool = False
    steps : list[Step] = field(default_factory=list)
+   line : int = 0
+   column : int = 0
 
 @dataclass
 class SubFlow(Step):

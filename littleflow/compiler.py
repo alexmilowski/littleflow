@@ -102,7 +102,7 @@ class Compiler:
             if statement.source is not None:
                named = subflow.named_outputs.get(statement.source)
                if named is None:
-                  raise ValueError(f'Unknown output label {statement.source}')
+                  raise ValueError(f'Unknown output label {statement.source} at {statement.line}:{statement.column}: {statement}')
                current = named.index
 
             for step in statement.steps:
@@ -117,7 +117,7 @@ class Compiler:
             if statement.destination is not None:
                named = subflow.named_inputs.get(statement.destination)
                if named is None:
-                  raise ValueError(f'Unknown input label {statement.destination}')
+                  raise ValueError(f'Unknown input label {statement.destination} at {statement.line}:{statement.column}: {statement}')
                flow[named.index].merge = flow[named.index].merge or statement.merge_destination
                flow.F[current,named.index] = 1
             else:
