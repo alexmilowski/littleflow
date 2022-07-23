@@ -158,8 +158,6 @@ A → B → D
 C → D
 ```
 
-which produces the graph:
-
 ```mermaid
 stateDiagram-v2
     [*] --> A
