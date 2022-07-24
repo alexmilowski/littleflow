@@ -721,6 +721,9 @@ A task may not have the following names:
 
 A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the workflow) and `:end` must be the right-most task (the end of the workflow). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
 
+### Comments
+
+A comment starts with `#` and ends with a newline.
 
 ## Extended features (future):
 
