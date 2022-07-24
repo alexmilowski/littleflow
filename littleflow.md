@@ -531,7 +531,7 @@ stateDiagram-v2
 
 A task is identified by name which are alpha-numeric along with the hyphen (`-`), underscore (`_`), and colon (`:`) (e.g., `my:peel-banana`).
 
-A task typically acts on inputs from within the pipeline but also may have parameters. Parameters are considered a single data structure that can be represented by JSON or YAML literals contained within paranthesis following the task name: `range(- {start: 1, end: 10} -)` (see the section on (Parameter iterals)[#parameter-literals] for more details).
+A task typically acts on inputs from within the pipeline but also may have parameters. Parameters are considered a single data structure that can be represented by JSON or YAML literals contained within paranthesis following the task name: `range(- {start: 1, end: 10} -)` (see the section on [parameter literals](#parameter-literals) for more details).
 
 A task is referred to by name and invoked with simple parameter values. As such, it is not necessary to declare a task. An implementation can determine the set of names and parameters used.
 
