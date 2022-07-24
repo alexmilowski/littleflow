@@ -139,3 +139,44 @@ There is also:
  * A [Kubernetes integration](integrations/k8s) that builds on the Redis integration to
    provide a way to execute tasks as [Kubernetes jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/).
  * A [Kubernetes deployment](deployment) that provides a way to deploy the framework on your Kubernetes cluster via [kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
+
+
+## Commands
+
+The `littleflow` module is executable and provide several commands.
+
+### compile
+
+```
+python -m littleflow compile WORKFLOW
+```
+
+This command will parse and compile a workflow and output various information
+about the workflow.
+
+### doc
+
+```
+python -m littleflow doc WORKFLOW
+```
+
+This command will generate a [mermaid diagram](https://mermaid-js.github.io/mermaid/#/) that represents the workflow graph.
+
+### run
+
+```
+python -m littleflow run WORKFLOW
+```
+
+This command will run a workflow with a pseudo-task executor that runs each
+task as a simple echo of input to output.
+
+This command is primarily for testing purposes. The [integration with redis](integrations/redis) provides a way to run workflows with real task executors.
+
+### version
+
+```
+python -m littleflow version
+```
+
+This command outputs the littleflow version.
