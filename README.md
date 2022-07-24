@@ -151,6 +151,8 @@ The `littleflow` module is executable and provide several commands.
 python -m littleflow compile WORKFLOW
 ```
 
+where `WORKFLOW` is a [littleflow workflow](littleflow.md) file.
+
 This command will parse and compile a workflow and output various information
 about the workflow.
 
@@ -160,6 +162,8 @@ about the workflow.
 python -m littleflow doc WORKFLOW
 ```
 
+where `WORKFLOW` is a [littleflow workflow](littleflow.md) file.
+
 This command will generate a [mermaid diagram](https://mermaid-js.github.io/mermaid/#/) that represents the workflow graph.
 
 ### run
@@ -167,6 +171,8 @@ This command will generate a [mermaid diagram](https://mermaid-js.github.io/merm
 ```
 python -m littleflow run WORKFLOW
 ```
+
+where `WORKFLOW` is a [littleflow workflow](littleflow.md) file.
 
 This command will run a workflow with a pseudo-task executor that runs each
 task as a simple echo of input to output.
