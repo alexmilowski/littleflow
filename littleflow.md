@@ -2,7 +2,7 @@
 
 ## A brief introduction
 
-Workflows are tasks that occur within some set of relationships. That
+Workflows consist of tasks that occur within some set of relationships. That
 is, a workflow forms a graph where the nodes are tasks and the edges are the
 relationships. The relationships in the graph provide ordering of tasks.
 Which task occur in what order depends on the preceding tasks in the graph.
