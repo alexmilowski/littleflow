@@ -4,22 +4,22 @@
 
 Workflows are tasks that occur within some set of relationships. That
 is, a workflow forms a graph where the nodes are tasks and the edges are the
-relationships. The relationships in the graph provide ordering of which tasks
-occur in what order by the preceding tasks they may depend upon and other
-criteria (e.g., conditionals).
+relationships. The relationships in the graph provide ordering of tasks.
+Which task occur in what order depends on the preceding tasks in the graph.
 
-By the nature, *workflows are not DAGs* as some have cycles and partitions. As
-such, in this context, a workflow is a graph that:
+In general, *workflows are not DAGs* as cycles and partitions are allowed.
+With respect to this, a workflow is a graph where:
 
  1. Every node represents a task in the workflow.
  1. Every edge is a directed edge.
  1. For any two distinct nodes A and B, there is only a single directed edge from A to B.
 
-With this definition, a few observations:
+With these definitions, a few observations:
 
- * Nodes are not required to be connected.
- * A workflow can consist of disconnected subgraphs
- * Cycles are allowed
+ * Nodes are not required to be connected,
+ * A workflow can consist of disconnected subgraphs,
+ * Cycles are allowed,
+ * Nodes can have multiple incoming edges as long as they are from different nodes.
 
 As the edges are directed, each subgraph in the workflow has a maximal join that can be considered the starting point of the subgraph. In the diagram below, `A` and `E` are the start of each subgraph as they are the maximal joins:
 
@@ -49,8 +49,8 @@ stateDiagram-v2
     G --> [*]
 ```
 
-A workflow is a *flow* of information from task to the next. The workflow has a single input that is passes to each starting tasks. These tasks may produce a single output. This output
-flows over the edge connecting two tasks.
+A workflow is a *flow* of information from one task to the next. The workflow has a single input that is passes to each starting task. These tasks may produce a single output. The output
+of each task flows over its connecting edges to the next task. This process continues until the end of the workflow is reached.
 
 For example, in the following workflow, task `A` receives the workflow input and
 produces its output. That output is fed into tasks `B` and `C` and the output of task `C` is fed into task `D`. At the end, the meet of tasks `B` and `D` in the workflow, the final output of the workflow is the collection of the output of tasks `B` and `D` (e.g., a list containing the two outputs).
@@ -65,33 +65,32 @@ stateDiagram-v2
     D --> [*]
 ```
 
-
 **The purpose of the inputs and outputs are to provide tasks with execution context.** Typically,
 this is not the main purpose of the workflow but information (e.g., metadata) needed to
-locate information in the environemtn. For example, the input to the pipeline might be
+locate information in the environment. For example, the input to the pipeline might be
 a reference to customer record or data object sufficient for the workflow tasks to
 retrieve information from a database.
 
-As long as tasks pass the context along, possibly enhancing the context with additional information, the following tasks will have sufficient information to proceed. This enables the construction of workflows that are more generic. That is, instead of specializing a workflow with parameters specific to the invocation, the context for the invocation is the input to the workflow.
+As long as tasks pass the context along, possibly enhancing or changing the context with additional information, the following tasks will have sufficient information to proceed. This enables the construction of workflows that are more generic but with complex behaviours. That is, instead of specializing a workflow with parameters specific to the invocation, the context for the invocation provides the specialization and the tasks can be written with more general behaviours.
 
-As such, over the edge flows information. Each task receives inputs over incoming edges and outputs information over outgoing edges. This information provides subsequent tasks the ability to evaluate what and whether they can perform their own task.
+In summary, over the edges flows information. Each task receives inputs over incoming edges and outputs information over outgoing edges. This information provides subsequent tasks the ability to evaluate what and whether they can perform their own task.
 
 ## What are tasks?
 
 A task follows these rules:
 
- * may consume a single input and produce a single output.
+ * may consume a single input, which may be a collection, and produce a single output.
  * may have side effects in the execution environment. That is, it does not have to be completely functional
  * may have additional parameters
 
-While conceptually a task can be anything:
+Conceptually, a task can be anything:
 
- * a function that receipts instructions via the input and parameters and product outputs without side-effects
+ * a function that receives instructions via the input and parameters and product outputs without side-effects
  * an external process whose arguments a combination of the parameters and the input that affects the state of the world (e.g., by producing some number of artifacts)
  * an invocation of a service via an API
  * interaction with a person or intelligent device (e.g., a robot)
 
-Concretely, a task is invoked by a workflow engine that feeds the task its context (i.e., parmaeters and input) and receives an output. Once complete, the engine determines the next step in computation and feeds outputs to inputs. Tasks are "black boxes" with metadata, an input, and an output.
+Concretely, a task is invoked by a workflow engine that feeds the task its context (i.e., name, parameters, and input) and receives an output. Once complete, the engine determines the next step in computation and feeds outputs to inputs. Tasks are "black boxes" with metadata, an input, and an output.
 
 ## Technical foundation
 
@@ -604,7 +603,10 @@ and with the merge operator, `B` receives:
 
 In short, inputs are merged into a single sequence of structured objects with duplicate empty objects merged or omitted when non-empty objects are present.
 
-The left-most tasks (i.e., :start) are sent a singleton empty object. The outputs of all the right-most tasks are aggregated using the rules above. Where the output of the overall workflow is
+The left-most task (i.e., :start) is sent the input of the workflow and produces that input as its output.
+
+The output of the right-most task (i.e., :end) is its input and is processed using the same
+rules as other tasks.
 
 ### Parameter literals
 
