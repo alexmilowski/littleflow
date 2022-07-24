@@ -51,7 +51,7 @@ stateDiagram-v2
   D.4-->[*]
 ```
 
-You can run workflows programmatically in python:
+You can run workflows programmatically in python (see [example-run.py](example-run.py)):
 
 ```python
 from littleflow import run_workflow
