@@ -689,7 +689,7 @@ where:
 
 #### Flow declarations
 
-A flow delcaration provides the name and documentation for the worlflow. There can
+A flow declaration provides the name and documentation for the workflow. There can
 only be one flow declaration per workflow.
 
 ```
@@ -698,12 +698,12 @@ This is a test workflow.
 '''
 ```
 
-The use of parameters is implemetation defined as it has no semantics in the
+The use of parameters is implementation defined as it has no semantics in the
 flow language itself.
 
 #### Task declarations
 
-A task delcaration provides additional information about tasks.
+A task declaration provides additional information about tasks.
 
 ```
 @task A (- dry-run: false -) '''
@@ -712,7 +712,7 @@ Task A has a single parameter of `dry-run` which is a boolean value.
 ```
 
 The task parameters provided are the default values for the the task. An
-implementation must merge the task default paraemters with the parameters
+implementation must merge the task default parameters with the parameters
 specified in the flow statements.
 
 
@@ -727,7 +727,7 @@ A task may not have the following names:
 
 ### Reserved labels
 
-A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the workflow) and `:end` must be the right-most task (the end of the workflow). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
+A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the flow statement) and `:end` must be the right-most task (the end of the flow statement). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
 
 ### Comments
 
