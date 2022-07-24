@@ -109,84 +109,33 @@ execution of tasks and for long-running workflows.
 
 ## Getting started
 
-In this example we can compile and run a workflow:
-
-```python
-from littleflow import Parser, Compiler, Context, Runner
-
-workflow = """
-A → {
-  B → C
-  D
-} → E
-"""
-
-p = Parser()
-c = Compiler()
-
-model = p.parse(workflow)
-flow = c.compile(model)
-
-context = Context(flow)
-runner = Runner()
-
-runner.start(context)
-
-while not context.ending.empty():
-   runner.next(context,context.ending.get())
-```
-
-This is further simplified with a utility function that also supports function lookups for tasks:
-
-```python
-from littleflow import run_workflow
-
-workflow = """
-A → {
-  B → C
-  D
-} → E
-"""
-
-def A(input):
-   print('Hello ',end='')
-
-def B(input):
-   print('workflow ',end='')
-
-def D(input):
-   print('world, ',end='')
-
-def C(input):
-   print('how are ',end='')
-
-def E(input):
-   print('you?')
-
-run_workflow(workflow,locals())
+You can pip install the library:
 
 ```
+pip install littleflow
+```
 
-Tasks are ordered by execution invocation. While some may be run in parallel,
-this relative to task invocation innovation.
+Workflows are specify in a [language called littleflow](littleflow.md). This
+workflow language allows you to describe the flow of steps as a graph and
+various parameters.
 
-Typically, a real usage would implement both the `start()` and `end()` methods
-on `FlowContext` that will start tasks and notify when these tasks end. Also, at task ends,
-the loop for execution would likely be asynchronous based on end task event
-notification.
-
-## Writing workflows
-
-Workflows are specify in a [declarative mini-language called littleflow](littleflow.md). This
-language allows you to describe the flow of steps and instructions between steps.
-
-## Running workflows
-
-These workflows are compiled into a graph that can be executed asynchronously. The
-state of the workflow is stored in a few simply vectors. This allows a simple
-stateless library to executed a workflow once those vectors are restored from
+A workflow is compiled into a graph that can be executed asynchronously. The
+workflow itself is represented by a matrix and an index of the tasks. The
+state of the workflow is stored in a few vectors. This allows a simple
+stateless algorithm run the workflow forward from any state represented by
+those vectors. As such, those vectors can be save and restored from
 storage.
 
-## Deployment
+The core library provides:
 
-Littleflow is integrated with Redis and Kubernetes for distributed execution. See [deployment](deployment) for more information.
+ * the language parser and compiler
+ * the core algorithm
+ * base classes for building more complex execution environments (e.g., for distributed execution or state storage)
+
+There is also:
+
+ * A [Redis integration](integrations/redis) for caching workflow state information and
+   workflow events to enable distrubuted execution
+ * A [Kubernetes integration](integrations/k8s) that builds on the Redis integration to
+   provide a way to execute tasks as [Kubernetes jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/).
+ * A [Kubernetes deployment](deployment) that provides a way to deploy the framework on your Kubernetes cluster via [kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
