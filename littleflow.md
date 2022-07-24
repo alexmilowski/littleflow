@@ -49,7 +49,7 @@ stateDiagram-v2
     G --> [*]
 ```
 
-A workflow is a *flow* of information from one task to the next. The workflow has a single input that is passes to each starting task. These tasks may produce a single output. The output
+A workflow is a *flow* of information from one task to the next. The workflow has a single input that is passes to each starting task. Each task may produce a single output. The output
 of each task flows over its connecting edges to the next task. This process continues until the end of the workflow is reached.
 
 For example, in the following workflow, task `A` receives the workflow input and
