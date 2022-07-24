@@ -108,16 +108,16 @@ Information flowing between tasks is limited to tree-structured information that
 
 A task:
 
- * receives a sequence of input data, possibly empty, over incoming edges
- * produces a single output, possibly empty, over outgoing edges
+ * receives an input, possibly empty or a collection, from the incoming edges
+ * produces a single output, possibly empty, for the outgoing edges
  * may create side-effects
 
 A *side effect* is typically an artifact or change in state of the world. For example, a task may write data to database, notify a user, or invoke actions in the physical world.
 
-Within the workflow itself, only the data flowing over the edges is explicitly know by the workflow engine for each task. Task writers by choose to convey information via the data flow or via side effects. Any information outside of the inputs and outputs is out of scope for the workflow engine execution.
+Within the workflow itself, only the data flowing over the edges is explicitly know by the workflow engine. Task writers may choose to convey information via the data flowing through the workflow graph or via side effects. Yet, any information outside of the inputs and outputs is out of scope for the workflow engine execution.
 
 A task in a workflow is not a replacement for a general purpose programming language. It
-is simply a representation of a task that is implemented in some language or system. The workflow engine must pass the input and any parameters to that system. When the task completes, the workflow engineer receives an output which can then be used for following tasks.
+is simply a representation of a task that is implemented in some language or system. The workflow engine must pass the input and any parameters to that system. When the task completes, the workflow engine receives an output which must be used for following tasks.
 
 ## A syntax for workflows
 
