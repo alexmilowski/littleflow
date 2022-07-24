@@ -85,10 +85,10 @@ A task follows these rules:
 
 Conceptually, a task can be anything:
 
- * a function that receives instructions via the input and parameters and product outputs without side-effects
+ * a function that receives instructions via the input and parameters and produces an output without side-effects
  * an external process whose arguments a combination of the parameters and the input that affects the state of the world (e.g., by producing some number of artifacts)
  * an invocation of a service via an API
- * interaction with a person or intelligent device (e.g., a robot)
+ * an interaction with a person or intelligent device (e.g., a robot)
 
 Concretely, a task is invoked by a workflow engine that feeds the task its context (i.e., name, parameters, and input) and receives an output. Once complete, the engine determines the next step in computation and feeds outputs to inputs. Tasks are "black boxes" with metadata, an input, and an output.
 
