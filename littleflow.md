@@ -96,7 +96,7 @@ Concretely, a task is invoked by a workflow engine that feeds the task its conte
 
 A flow represents a workflow as a graph that:
 
- 1. Nodes represent tasks.
+ 1. Nodes represent task invocations.
  1. Edges are directed.
  1. An edge from A to B means that A occurs before B.
  1. Two distinct nodes A and B are only connected by one edge from A to B.
