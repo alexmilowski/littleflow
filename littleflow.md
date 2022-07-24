@@ -543,7 +543,7 @@ A task receives a set of inputs of structured information. If a preceding task p
 
 A task may only output one structured object as its output.
 
-When two tasks are joined (e.g. `A → B`), the input is simply the output of the preceding task.
+When two tasks are joined (e.g. `A → B`), the input to the following task is simply the output of the preceding task.
 
 If there are more than two incoming edges, the inputs are aggregated via the following rules:
 
@@ -560,7 +560,7 @@ A → :x B
 C → :x
 ```
 
-```
+```mermaid
 stateDiagram-v2
   direction LR
   state "A" as A.1
