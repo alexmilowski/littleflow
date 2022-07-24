@@ -655,7 +655,7 @@ Flows may also start with a literal:
 <- customer: C123 -> → A → B
 ```
 
-For parameter literals:
+For resource literals:
 
  * a YAML literal is contained within `<-` and `->` delimiters
  * a JSON object is contained within `<{` and `}>` delimiters
