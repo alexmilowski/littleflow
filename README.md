@@ -6,7 +6,7 @@ A little flow language with simple objectives:
  * a core algorithm for invocation of workflows and tasks
  * flows are independent of task implementation or workflow deployments
 
-This littleflow project is an independent flow language, a workflow engine,
+The littleflow project has an independent flow language, a workflow engine,
 and provides integrations with Redis and Kubernetes.
 
 ## A quick introduction
