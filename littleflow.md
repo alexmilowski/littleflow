@@ -465,14 +465,14 @@ An implementation may provide parameters options for accessing resources that re
 
 Every task referenced in a flow statement is unique invocation. A task referenced more than once is a distinct invocation of the same task. The workflow graph is stitched together from all invocations of all the tasks by label references.
 
-For example, this is workflow with two distinct and separate flows:
+For example, this is workflow with two distinct invocations of C from separate flows:
 
 ```
 A → C
 B → C
 ```
 
-While this workflow has a single instance of task C:
+While this workflow has a single invocation of task C:
 
 ```
 A → :meet C
