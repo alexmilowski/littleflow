@@ -127,7 +127,7 @@ The goals of this syntax are:
  1. A representation of tasks and their metadata operations
  1. Enabling common expressions over metadata between tasks (e.g., subflows, interation, conditionals)
 
-A workflow is a sequence of whitespace separated statements. Each statement starts with a label or task name, a sequence of arrow operations, and ends with a label or task name.
+A workflow is a sequence of whitespace separated flow statements. In general, a flow statement starts with a label or task name, a sequence of arrow operations, and ends with a label or task name.
 
 ### Flow statements
 
@@ -251,13 +251,19 @@ It may follow a task to label the output:
 A :x
 ```
 
-And it may precede a task to label the input:
+It may precede a task to label the input:
 
 ```
 :x A
 ```
 
-For example, inputs may be explictly connected:
+Finally, it may end a flow statement:
+
+```
+A → :x
+```
+
+For example, inputs may be explicitly connected:
 
 ##### Example 3
 
