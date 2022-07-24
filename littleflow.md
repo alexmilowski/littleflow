@@ -665,14 +665,14 @@ There is no preprocessing of the literal between the start and end delimiters.
 
 ### Declarations
 
-A declaration provides metadata and defaults for the workflow. There are two
+A declaration provides metadata and defaults for items in the workflow. There are two
 kinds of declarations:
 
  * flow declarations for the workflow itself
  * task declarations for tasks
 
 Declarations are completely optional and only provide additional information such
-as documentation or parmaeter defaults.
+as documentation or parameter defaults.
 
 The general syntax is:
 
