@@ -37,7 +37,7 @@ class FunctionTaskContext(TaskContext):
       if not isinstance(f,types.FunctionType):
          raise ValueError(f'Task {invocation.name} resolves to non-function')
       options = getattr(f,'__invocation__') if hasattr(f,'__invocation__') else []
-      args = [input] if 'input' in options else []
+      args = [input] if 'input' in options else [{}]
       keywords = {}
       if invocation.parameters is not None:
          if 'raw_parameters' not in options:
