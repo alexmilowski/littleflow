@@ -1,0 +1,35 @@
+substitutions:
+  _BRANCH_NAME: main
+  _BUCKET: yourbuckethere
+  _BUCKET_PATH: ""
+  _PYTHON_VERSION: "3.10"
+steps:
+- name: 'gcr.io/cloud-builders/git'
+  args:
+  - clone
+  - -b
+  - $_BRANCH_NAME
+  - https://github.com/alexmilowski/littleflow.git
+  - littleflow
+- name: python
+  entrypoint: pip
+  dir: 'service'
+  args: ["install", "--user", "shiv"]
+- name: "python:${_PYTHON_VERSION}"
+  entrypoint: bash
+  dir: 'littleflow'
+  args:
+  - '-eEuo'
+  - 'pipefail'
+  - '-c'
+  - |-
+    export VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('setup.cfg'); print(p['metadata']['version'])"`;
+    export REDIS_VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('integrations/redis/setup.cfg'); print(p['metadata']['version'])"`;
+    export ARCHIVE=littleflow-redis-$${VERSION}-$${REDIS_VERSION}-${_PYTHON_VERSION}-${_ARCH}.pyz;
+    echo "Building $${ARCHIVE}";
+    echo "";
+    python -m shiv -o $${ARCHIVE} -e littleflow_redis:main . integrations/redis gunicorn[gevent];
+artifacts:
+  objects:
+    location: 'gs://$_BUCKET/$_BUCKET_PATH/'
+    paths: ['littleflow/littleflow-redis-*.pyz']

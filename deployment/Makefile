@@ -25,12 +25,18 @@ local-build:
 	shiv -o ${ARCHIVE} -e littleflow_redis:main .. ../integrations/redis gunicorn
 
 
+make-build-storage:
+	aws sts get-session-token | python -c "import json, sys; d=json.load(sys.stdin)['Credentials']; s=open('remote-build/template/storage.properties').read(); print(s.format(**d))" > ${NAME}/storage.properties
+	
 make-build:
 	mkdir -p ${NAME}
 	aws sts get-session-token | python -c "import json, sys; d=json.load(sys.stdin)['Credentials']; s=open('remote-build/template/storage.properties').read(); print(s.format(**d))" > ${NAME}/storage.properties
 	REPO_URL=${REPO_URL} BRANCH=${BRANCH} BUCKET=${BUCKET} BUCKET_PATH=${BUCKET_PATH} ARCH=${ARCH} python -c "import json, os; s=open('remote-build/template/config.properties').read(); print(s.format(**os.environ))" > ${NAME}/config.properties
 	NAMESPACE=${BUILD_NAMESPACE} SUFFIX=${BUILD_SUFFIX}-${ARCH} python -c "import os; s=open('remote-build/template/kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/kustomization.yaml
 	ARCH=${ARCH} python -c "import os; s=open('remote-build/template/arch.yaml').read(); print(s.format(**os.environ))" > ${NAME}/arch.yaml
+
+run-cloudbuild:
+	gcloud builds submit --config=cloudbuild.yaml --no-source --substitutions=_BUCKET=${BUCKET},_BUCKET_PATH=${BUCKET_PATH},_BRANCH_NAME=${BRANCH},_ARCH=${ARCH}
 
 make-deploy:
 	mkdir -p ${NAME}/site
