@@ -5,3 +5,6 @@ namespace: {NAMESPACE}
 bases:
 - ../../{DIR}
 - ../site
+
+patches:
+- path: init.yaml

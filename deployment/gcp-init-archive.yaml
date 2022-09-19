@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: littleflow
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: google-toaster-warmer
+          image: gcr.io/google.com/cloudsdktool/cloud-sdk:alpine
+          command: ["/bin/bash","-lc"]
+          args:
+          - |-
+            curl -sS -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' --retry 30 --retry-connrefused --retry-max-time 60 --connect-timeout 3 --fail --retry-all-errors > /dev/null && exit 0 || echo 'Retry limit exceeded. Failed to wait for metadata server to be available. Check if the gke-metadata-server Pod in the kube-system namespace is healthy.' >&2; exit 1
+          resources:
+            requests:
+              cpu: 0.5
+              memory: 0.5Gi
+            limits:
+              cpu: 0.5
+              memory: 0.5Gi      
+        - name: download
+          image: google/cloud-sdk:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: BUCKET
+            valueFrom:
+              configMapKeyRef:
+                name: config
+                key: bucket
+          - name: BUCKET_PATH
+            valueFrom:
+              configMapKeyRef:
+                name: config
+                key: path
+          - name: ARCHIVE
+            valueFrom:
+              configMapKeyRef:
+                name: config
+                key: archive
+          - name: SOURCE
+            value: gs://$(BUCKET)/$(BUCKET_PATH)$(ARCHIVE)
+          command: ["/bin/bash","-lc"]
+          args:
+          - |-
+            set -e;
+            echo "Downloading ${SOURCE} to /app/${ARCHIVE}";
+            gsutil -D cp ${SOURCE} /app/${ARCHIVE};
+            echo '#!/bin/bash -l' >> /app/run.sh;
+            echo 'cd /app' >> /app/run.sh;
+            echo '/usr/local/bin/python $*' >> /app/run.sh;
+            chmod +x /app/run.sh
+          volumeMounts:
+          - name: app
+            mountPath: /app

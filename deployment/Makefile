@@ -1,7 +1,8 @@
 VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('../setup.cfg'); print(p['metadata']['version'])"`
 REDIS_VERSION=`python -c "import configparser; p=configparser.ConfigParser(); p.read('../integrations/redis/setup.cfg'); print(p['metadata']['version'])"`
+PYTHON_VERSION=3.10
 ARCH=amd64
-ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}-${ARCH}.pyz
+ARCHIVE=littleflow-redis-${VERSION}-${REDIS_VERSION}-${PYTHON_VERSION}-${ARCH}.pyz
 NAME=test
 REPO_URL=https://github.com/alexmilowski/littleflow.git
 BRANCH=main
@@ -14,6 +15,7 @@ REDIS_HOST=redis-primary.data.svc.cluster.local
 REDIS_PORT=6379
 REDIS_USERNAME=default
 REDIS_PASSWORD=
+ARCHIVE_INIT=gcp-init-archive.yaml
 NAMESPACE=littleflow
 
 all:
@@ -45,9 +47,13 @@ make-deploy:
 	cp site-kustomization.yaml ${NAME}/site/kustomization.yaml
 	mkdir -p ${NAME}/receiptlog
 	NAMESPACE=${NAMESPACE} DIR=receiptlog python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/receiptlog/kustomization.yaml
+	cp ${ARCHIVE_INIT} ${NAME}/receiptlog/init.yaml
 	mkdir -p ${NAME}/lifecycle
 	NAMESPACE=${NAMESPACE} DIR=lifecycle python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/lifecycle/kustomization.yaml
+	cp ${ARCHIVE_INIT} ${NAME}/lifecycle/init.yaml
 	mkdir -p ${NAME}/api
 	NAMESPACE=${NAMESPACE} DIR=api python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/api/kustomization.yaml
+	cp ${ARCHIVE_INIT} ${NAME}/api/init.yaml
 	mkdir -p ${NAME}/console
 	NAMESPACE=${NAMESPACE} DIR=console python -c "import os; s=open('worker-kustomization.yaml').read(); print(s.format(**os.environ))" > ${NAME}/console/kustomization.yaml
+	cp ${ARCHIVE_INIT} ${NAME}/console/init.yaml

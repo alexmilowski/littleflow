@@ -89,6 +89,7 @@ Variables to set:
  * `REDIS_PORT` The redis port (defaults to 6379)
  * `REDIS_USERNAME` The redis user (defaults to `default`)
  * `REDIS_PASSWORD` The redis password (no default)
+ * `ARCHIVE_INIT` The archive intitialization template (e.g., `aws-init-archive.yaml` or `gcp-init-archive.yaml` - defaults to `gcp-init-archive.yaml`)
 
 Build the kustomization:
 
@@ -96,7 +97,13 @@ Build the kustomization:
 NAME=test-deploy BUCKET=test-littleflow REDIS_HOST=myredis.data.svc.cluster.local make -e make-deploy
 ```
 
-Then deploy the receiptlog and lifecycle workers:
+Make sure you have the `littleflow` service account:
+
+```
+kubectl apply -f account.yaml
+```
+
+Then deploy the workers, api, and console:
 
 ```
 kubectl apply -k test-deploy/lifecycle
