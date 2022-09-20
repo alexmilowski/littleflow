@@ -10,8 +10,9 @@ import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
 import redis
 
-from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener, WaitTaskListener
+from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener, WaitTaskListener, RequestTaskListener
 from littleflow_redis import compute_vector, trace_vector
+from littleflow_redis import create_jwt_credential_actor
 
 default_stream_key = 'workflows:run'
 default_workflows_key = 'workflows:all'
@@ -87,7 +88,20 @@ def run(stream,workflow_id,wait,host,port,username,password,workflow,input):
 @click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
-def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password):
+@click.option('--issuer',help='The key configuration for JWT authentication',default=os.environ.get('ISSUER'))
+def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password,issuer):
+
+   auth_actor = None
+
+   if issuer is not None:
+      with open(issuer,'r') as raw:
+         issuer_info = json.load(issuer)
+         issuer = issuer_info.get('client_email')
+         private_key = issuer_info.get('private_key')
+         kid = issuer_info.get('private_key_id')
+
+         if private_key is not None:
+            auth_actor = create_jwt_credential_actor({},private_key=private_key,kid=kid,issuer=issuer)
 
    # we need something that will respond to end tasks and the algorithm forward
    end_listener = TaskEndListener(stream,group,host=host,port=port,username=username,password=password)
@@ -101,15 +115,22 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
    wait = threading.Thread(target=lambda : wait_listener.listen())
    wait.start()
 
+   # we need something that will respond to end tasks and the algorithm forward
+   request_listener = RequestTaskListener(stream,credential_actor=auth_actor,host=host,port=port,username=username,password=password)
+
+   request = threading.Thread(target=lambda : request_listener.listen())
+   request.start()
+
    # jut wait till tings are established
    max_wait = 5
-   while not end_listener.established and not wait_listener.established and max_wait>0:
+   while not end_listener.established and not wait_listener.established and not request_listener.established and max_wait>0:
       sleep(1)
       max_wait -= 1
 
    # make sure we're connected
    assert end_listener.established
    assert wait_listener.established
+   assert request_listener.established
 
    recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress,host=host,port=port,username=username,password=password)
 
@@ -123,6 +144,7 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
 
       end_listener.stop()
       wait_listener.stop()
+      request_listener.stop()
       recorder.stop()
       print(f'Received interrupt, shutting down',flush=True)
 
