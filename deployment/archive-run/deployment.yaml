@@ -52,12 +52,3 @@ spec:
       volumes:
       - name: app
         emptyDir: {}
-      - name: aws-config
-        secret:
-          secretName: aws
-          defaultMode: 0400
-          items:
-          - key: aws-credentials
-            path: credentials
-          - key: aws-config
-            path: config
