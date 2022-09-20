@@ -113,7 +113,7 @@ class Delay:
 
 class WaitTaskListener(EventListener):
 
-   def __init__(self,key,group='starting',host='0.0.0.0',port=6379,username=None,password=None,pool=None):
+   def __init__(self,key,group='wait',host='0.0.0.0',port=6379,username=None,password=None,pool=None):
       super().__init__(key,group,select=['start-task'],host=host,port=port,username=username,password=password,pool=pool)
       self._work = collections.deque()
       self._lock = threading.RLock()
