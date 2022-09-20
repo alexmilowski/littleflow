@@ -5,6 +5,7 @@ from time import sleep
 from random import random
 import signal
 import json
+import logging
 
 import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
@@ -89,13 +90,19 @@ def run(stream,workflow_id,wait,host,port,username,password,workflow,input):
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
 @click.option('--issuer',help='The key configuration for JWT authentication',default=os.environ.get('ISSUER'))
-def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password,issuer):
+@click.option('--log-level',help='Sets the log level',type=click.Choice(['debug','info','warning','error','critical']))
+def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password,issuer,log_level):
+
+   if log_level is not None:
+      n_log_level = getattr(logging, log_level.upper(), None)
+      if n_log_level is not None:
+         logging.basicConfig(level=n_log_level)
 
    auth_actor = None
 
    if issuer is not None:
       with open(issuer,'r') as raw:
-         issuer_info = json.load(issuer)
+         issuer_info = json.load(raw)
          issuer = issuer_info.get('client_email')
          private_key = issuer_info.get('private_key')
          kid = issuer_info.get('private_key_id')
