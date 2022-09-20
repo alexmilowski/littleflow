@@ -5,3 +5,4 @@ flasgger
 pyyaml
 requests
 boto3
+pyjwt[crypto]
