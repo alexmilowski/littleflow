@@ -65,9 +65,9 @@ class RequestTaskListener(EventListener):
             url += '?'
          else:
             url += '&'
-         url += f'task-name={name}'
-         url += f'&index={index}'
-         url += f'&workflow={workflow_id}'
+         url += f'littleflow-name={name}'
+         url += f'&littleflow-index={index}'
+         url += f'&littleflow-workflow={workflow_id}'
 
       if is_debug:
          logging.debug(f'HTTP {task_name.upper()} request on {url}')
