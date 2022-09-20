@@ -46,7 +46,7 @@ class Compiler:
    def compile(self,model):
 
       size = len(model.indexed)
-      assert size>2, 'The workflow contains now flows.'
+      assert size>2, 'The workflow contains no flows.'
       flow = Flow(size,name=model.name)
 
       for index, step in enumerate(model.indexed):
