@@ -100,8 +100,8 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
 
    auth_actor = None
 
-   if issuer is not None:
-      with open(issuer,'r') as raw:
+   if issuer is not None and os.path.exists(os.path.expanduser(issuer)):
+      with open(os.path.expanduser(issuer),'r') as raw:
          issuer_info = json.load(raw)
          issuer = issuer_info.get('client_email')
          private_key = issuer_info.get('private_key')
