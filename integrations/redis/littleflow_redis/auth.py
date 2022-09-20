@@ -4,7 +4,7 @@ from calendar import timegm
 import jwt
 
 def create_jwt_credential_actor(claims,private_key,kid=None,expiry=3600,issuer=None):
-   def actor():
+   def actor(input,parameters):
       headers = {'kid':kid} if kid is not None else {}
       payload = claims.copy()
       now = timegm(datetime.utcnow().utctimetuple())
