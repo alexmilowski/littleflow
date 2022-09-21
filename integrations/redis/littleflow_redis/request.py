@@ -34,11 +34,10 @@ class RequestTaskListener(EventListener):
       is_debug = logging.DEBUG >= logging.getLogger().getEffectiveLevel()
 
       workflow_id = event.get('workflow')
-      name = event.get('base')
-      if name is None:
-         name = event.get('name')
+      base = event.get('base')
+      name = event.get('name')
       index = event.get('index')
-      ns, _, task_name = name.partition(':')
+      ns, _, task_name = base.partition(':') if base is not None else name.partition(':')
       if ns!='request':
          return False
 
@@ -78,6 +77,7 @@ class RequestTaskListener(EventListener):
          else:
             url += '&'
          url += f'littleflow-name={name}'
+         url += f'littleflow-name={base}'
          url += f'&littleflow-index={index}'
          url += f'&littleflow-workflow={workflow_id}'
 
