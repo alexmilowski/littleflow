@@ -17,6 +17,7 @@ REDIS_USERNAME=default
 REDIS_PASSWORD=
 ARCHIVE_INIT=gcp-init-archive.yaml
 NAMESPACE=littleflow
+LOG_LEVEL=info
 
 all:
 	@echo "Littleflow: ${VERSION}"
@@ -42,7 +43,7 @@ run-cloudbuild:
 
 make-deploy:
 	mkdir -p ${NAME}/site
-	BUCKET=${BUCKET} BUCKET_PATH=${BUCKET_PATH} ARCHIVE=${ARCHIVE} REDIS_HOST=${REDIS_HOST} REDIS_PORT=${REDIS_PORT} python -c "import os; [print(name+'='+os.environ.get(env_name,'')) for name,env_name in [('bucket','BUCKET'),('path','BUCKET_PATH'),('archive','ARCHIVE'),('redis_host','REDIS_HOST'),('redis_port','REDIS_PORT')]]" > ${NAME}/site/config.properties
+	BUCKET=${BUCKET} BUCKET_PATH=${BUCKET_PATH} ARCHIVE=${ARCHIVE} REDIS_HOST=${REDIS_HOST} REDIS_PORT=${REDIS_PORT} LOG_LEVEL=${LOG_LEVEL} python -c "import os; [print(name+'='+os.environ.get(env_name,'')) for name,env_name in [('bucket','BUCKET'),('path','BUCKET_PATH'),('archive','ARCHIVE'),('redis_host','REDIS_HOST'),('redis_port','REDIS_PORT'),('log_level','LOG_LEVEL')]]" > ${NAME}/site/config.properties
 	REDIS_USERNAME=${REDIS_USERNAME} REDIS_PASSWORD=${REDIS_PASSWORD} python -c "import os; [print(name+'='+os.environ.get(env_name,'')) for name,env_name in [('username','REDIS_USERNAME'),('password','REDIS_PASSWORD')]]" > ${NAME}/site/redis.properties
 	cp site-kustomization.yaml ${NAME}/site/kustomization.yaml
 	mkdir -p ${NAME}/receiptlog
