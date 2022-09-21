@@ -48,15 +48,26 @@ class RequestTaskListener(EventListener):
 
       sync = bool(value_for(input,parameters,'sync',True))
 
-      metadata = MetadataService.getService()
+      environ = value_for(input,parameters,'environ')
+      metadata = MetadataService.getService(environ=environ)
 
       category = value_for({},parameters,'category',default='')
 
       base_url = metadata[f'{category}_url' if category is not None else 'base_url']
 
       url = value_for(input,parameters,'url')
+      if is_debug:
+         logging.debug(f'environ={environ}')
+         logging.debug(f'category={category}')
+         logging.debug(f'base_url={base_url}')
+         logging.debug(f'url={url}')
+
       if base_url is not None:
          url = urljoin(base_url,url)
+
+      if is_debug:
+         logging.debug(f'final_url={url}')
+         
       template = value_for(input,parameters,'template')
       content_type = value_for(input,parameters,'content_type','application/json')
       use_context_parameters = bool(value_for(input,parameters,'use_context_parameters',True))
