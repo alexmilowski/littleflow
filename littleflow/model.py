@@ -90,6 +90,7 @@ class SubFlow(Step):
 class Declaration:
    kind : str
    name : str
+   base : str = None
    doc : str = None
    parameters : ParameterLiteral = None
 

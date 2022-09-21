@@ -4,7 +4,7 @@ from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterat
 
 grammar = r"""
 flow: (declaration | flow_statement)+
-declaration: DECLARE NAME parameter_literal? doc_comment? ";"?
+declaration: DECLARE NAME (EQUAL NAME)? parameter_literal? doc_comment? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
 step: LABEL? (STAR | MERGE)? (task_list | subflow | conditional) LABEL?
 task_list : task (OR task)*
@@ -29,6 +29,7 @@ ARROW: "→" | "->"
 STAR: "*"
 OR: "|"
 MERGE: ">"
+EQUAL: "="
 DECLARE: "@" NAME
 LABEL: ":" NAME
 NAME: /[a-zA-Z_][\w\-_:]*/
@@ -274,6 +275,10 @@ class Parser:
          elif item.data=='declaration':
             kind = item.children[0].value[1:]
             decl = Declaration(kind,item.children[1].value)
+            if len(item.children)>2 and isinstance(item.children[2],Token) and item.children[2].type=='EQUAL':
+               if kind=='flow':
+                  assert False, f'{item.data.line}:{item.data.column} flows can not have base types'
+               decl.base = item.children[3].value
             if kind=='flow':
                workflow.name = decl.name
             key = (kind,decl.name)

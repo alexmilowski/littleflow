@@ -79,6 +79,7 @@ class Compiler:
             flow[index] = InvokeTask(index,step.name,value,merge=step.merge)
             if decl is not None:
                flow[index].doc = decl.doc
+               flow[index].base = decl.base
          elif isinstance(step,LiteralSource):
             try:
                value = compile_literal(step.value,step.type)

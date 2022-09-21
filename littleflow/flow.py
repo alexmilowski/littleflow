@@ -23,6 +23,7 @@ class Sink(Invocation):
 class InvokeTask(Invocation):
    name: str
    parameters : 'typing.Any' = None
+   base: str = None
    doc: str = None
    merge: bool = False
 
