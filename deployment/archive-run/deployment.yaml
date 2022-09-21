@@ -40,6 +40,11 @@ spec:
             configMapKeyRef:
               name: config
               key: redis_port
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: log_level
         - name: ARCHIVE
           valueFrom:
             configMapKeyRef:
