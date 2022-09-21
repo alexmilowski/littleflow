@@ -43,12 +43,18 @@ class MetadataService:
       connection_username = username if username is not None else os.environ.get('REDIS_USERNAME')
       connection_password = password if password is not None else os.environ.get('REDIS_PASSWORD')
       pool = redis.ConnectionPool(host=connection_host,port=connection_port,username=connection_username,password=connection_password)
-      return MetadataService(pool,prefix=prefix)
+      return MetadataService(pool,prefix=prefix,environ=environ)
 
    def __init__(self,pool,prefix=None,environ='global'):
       self._pool = pool
       self._prefix = prefix
       self._environ = environ
+      if self._environ is None:
+         self._environ = 'global'
+
+   @property
+   def environ(self):
+      return self._environ
 
    @property
    def pool(self):
@@ -66,12 +72,14 @@ class MetadataService:
       return redis.Redis(connection_pool=self.pool)
 
    def get(self,name,environ=None,default=None):
-      value = self.connection.get(f'{self.prefix}env:{self._environ if environ is None else environ}:{name}')
+      key = f'{self.prefix}env:{self._environ if environ is None else environ}:{name}'
+      value = self.connection.get(key)
       if value is None:
          return default
       else:
          return value.decode('utf-8')
 
    def __getitem__(self,name):
-      value = self.connection.get(f'{self.prefix}env:{self._environ}:{name}')
+      key = f'{self.prefix}env:{self._environ}:{name}'
+      value = self.connection.get(key)
       return value.decode('utf-8') if value is not None else None
