@@ -90,7 +90,7 @@ def run(stream,workflow_id,wait,host,port,username,password,workflow,input):
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
 @click.option('--issuer',help='The key configuration for JWT authentication',default=os.environ.get('ISSUER'))
-@click.option('--log-level',help='Sets the log level',type=click.Choice(['debug','info','warning','error','critical']))
+@click.option('--log-level',help='Sets the log level',type=click.Choice(['debug','info','warning','error','critical']),default=os.environ.get('LOG_LEVEL'))
 def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password,issuer,log_level):
 
    if log_level is not None:
@@ -158,6 +158,21 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
    signal.signal(signal.SIGINT, interrupt_handler)
 
    recorder.listen()
+
+@cli.command('end')
+@click.option('--stream',help='The event stream to use',default=default_stream_key)
+@click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
+@click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
+@click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
+@click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
+@click.argument('workflow')
+@click.argument('name')
+@click.argument('index')
+def event(stream,host,port,username,password,workflow,name,index):
+   index = int(index)
+   client = EventClient(stream,host=host,port=port,username=username,password=password)
+   event = {'name':name,'index':index,'workflow':workflow}
+   client.append(message(event,kind='end-task'))
 
 @cli.command('event')
 @click.option('--stream',help='The event stream to use',default=default_stream_key)
