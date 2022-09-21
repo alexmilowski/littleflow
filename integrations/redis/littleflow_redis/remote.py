@@ -34,7 +34,11 @@ class RemoteTaskContext(FunctionTaskContext):
       if invocation.name in self._lookup:
          return super().invoke(context,invocation,input)
 
-      event = {'name':invocation.name,'index':invocation.index,'workflow':self._workflow_id}
+      event = {'name':invocation.name,'base':invocation.name,'index':invocation.index,'workflow':self._workflow_id}
+
+      if invocation.base is not None:
+         event['base'] = invocation.base
+         
       if invocation.parameters is not None:
          event['parameters'] = invocation.parameters
 

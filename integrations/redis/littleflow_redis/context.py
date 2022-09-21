@@ -1,4 +1,7 @@
 import json
+import os
+
+import redis
 
 class RedisOutputCache:
 
@@ -31,3 +34,44 @@ class RedisOutputCache:
          raise ValueError(f'Incompatible type {type(value)}')
       key = f'{self._prefix}:output:{index}'
       self._client.set(key,json.dumps(value))
+
+class MetadataService:
+
+   def getService(host=None,port=None,username=None,password=None,prefix=None,environ='global'):
+      connection_host = host if host is not None else os.environ.get('REDIS_HOST','0.0.0.0')
+      connection_port = int(port if port is not None else os.environ.get('REDIS_PORT',6379))
+      connection_username = username if username is not None else os.environ.get('REDIS_USERNAME')
+      connection_password = password if password is not None else os.environ.get('REDIS_PASSWORD')
+      pool = redis.ConnectionPool(host=connection_host,port=connection_port,username=connection_username,password=connection_password)
+      return MetadataService(pool,prefix=prefix)
+
+   def __init__(self,pool,prefix=None,environ='global'):
+      self._pool = pool
+      self._prefix = prefix
+      self._environ = environ
+
+   @property
+   def pool(self):
+      return self._pool
+
+   @property
+   def prefix(self):
+      prefix = self._prefix
+      if prefix is None:
+         prefix = self.connection.get('littleflow:config:env-prefix')
+      return prefix if prefix is not None else ''
+
+   @property
+   def connection(self):
+      return redis.Redis(connection_pool=self.pool)
+
+   def get(self,name,environ=None,default=None):
+      value = self.connection.get(f'{self.prefix}env:{self._environ if environ is None else environ}:{name}')
+      if value is None:
+         return default
+      else:
+         return value.decode('utf-8')
+
+   def __getitem__(self,name):
+      value = self.connection.get(f'{self.prefix}env:{self._environ}:{name}')
+      return value.decode('utf-8') if value is not None else None

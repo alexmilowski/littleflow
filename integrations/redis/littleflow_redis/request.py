@@ -1,11 +1,12 @@
 import logging
+from urllib.parse import urljoin
 
 import requests 
 
 from rqse import EventListener, message, receipt_for
 from littleflow import merge
 
-from .context import RedisOutputCache
+from .context import RedisOutputCache, MetadataService
 
 def value_for(input,parameters,name,default=None):
    return input.get(name,parameters.get(name,default)) if input is not None else parameters.get(name,default) if parameters is not None else default
@@ -33,7 +34,9 @@ class RequestTaskListener(EventListener):
       is_debug = logging.DEBUG >= logging.getLogger().getEffectiveLevel()
 
       workflow_id = event.get('workflow')
-      name = event.get('name')
+      name = event.get('base')
+      if name is None:
+         name = event.get('name')
       index = event.get('index')
       ns, _, task_name = name.partition(':')
       if ns!='request':
@@ -45,7 +48,16 @@ class RequestTaskListener(EventListener):
       self.append(receipt_for(event_id))
 
       sync = bool(value_for(input,parameters,'sync',True))
+
+      metadata = MetadataService.getService()
+
+      category = value_for({},parameters,'category',default='')
+
+      base_url = metadata[f'{category}_url' if category is not None else 'base_url']
+
       url = value_for(input,parameters,'url')
+      if base_url is not None:
+         url = urljoin(base_url,url)
       template = value_for(input,parameters,'template')
       content_type = value_for(input,parameters,'content_type','application/json')
       use_context_parameters = bool(value_for(input,parameters,'use_context_parameters',True))
@@ -78,7 +90,7 @@ class RequestTaskListener(EventListener):
             headers['Authorization'] = f'Bearer {self._credential_actor(input,parameters)}'
             if is_debug:
                logging.debug(f'Authorization: {headers["Authorization"]}')
-         data = template.format(input=input,parameters=parameters) if template is not None else None
+         data = template.format(input=input,parameters=parameters) if template is not None else input
          if task_name=='get':
             response = requests.get(url,headers=headers)
          elif task_name=='post':
@@ -97,28 +109,28 @@ class RequestTaskListener(EventListener):
             return self.fail(workflow_id,index,name,f'Request failed ({response.status_code}): {response.text}')
 
 
+         try:
+            output = input
+            for mode in output_modes:
+               if output is None:
+                  output = {}
+               if mode=='status':
+                  output['request_status'] = response.status_code
+               elif mode=='response_text':
+                  if is_debug:
+                     logging.debug(response.text)
+                  output['response'] = response.text
+               elif mode=='response_json':
+                  if is_debug:
+                     logging.debug(response.text)
+                  output['response'] = response.json()
+         except Exception as ex:
+            logging.exception(f'Unabled to process output of {name} due to exception.')
+            return self.fail(workflow_id,index,name,f'Unabled to process response output due to exception: {ex}')
+
+         self.output_for(workflow_id,index,output)
+
          if sync:
-            try:
-               output = input
-               for mode in output_modes:
-                  if output is None:
-                     output = {}
-                  if mode=='status':
-                     output['request_status'] = response.status_code
-                  elif mode=='response_text':
-                     if is_debug:
-                        logging.debug(response.text)
-                     output['response'] = response.text
-                  elif mode=='response_json':
-                     if is_debug:
-                        logging.debug(response.text)
-                     output['response'] = response.json()
-            except Exception as ex:
-               logging.exception(f'Unabled to process output of {name} due to exception.')
-               return self.fail(workflow_id,index,name,f'Unabled to process response output due to exception: {ex}')
-
-            self.output_for(workflow_id,index,output)
-
             event = {'name':name,'index':index,'workflow':workflow_id}
             self.append(message(event,kind='end-task'))
 

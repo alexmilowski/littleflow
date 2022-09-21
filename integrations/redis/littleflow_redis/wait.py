@@ -165,7 +165,9 @@ class WaitTaskListener(EventListener):
 
    def process(self,event_id, event):
       workflow_id = event.get('workflow')
-      name = event.get('name')
+      name = event.get('base')
+      if name is None:
+         name = event.get('name')
       index = event.get('index')
       ns, _, task_name = name.partition(':')
       if ns!='wait':
