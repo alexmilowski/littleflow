@@ -102,7 +102,7 @@ class Delay:
    def run(self):
       self._wait.wait(self._delay)
       if self._info.input is not None:
-         cache = RedisOutputCache(self.connection,self._info.workflow_id)
+         cache = RedisOutputCache(self.parent.connection,self._info.workflow_id)
          cache[self._info.index] = self._info.input
       event = {'name':self._info.name,'index':self._info.index,'workflow':self._info.workflow_id}
       self.parent.append(message(event,kind='end-task'))
