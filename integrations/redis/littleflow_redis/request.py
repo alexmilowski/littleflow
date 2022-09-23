@@ -1,5 +1,6 @@
 import logging
 from urllib.parse import urljoin
+import json
 
 import requests 
 
@@ -88,7 +89,7 @@ class RequestTaskListener(EventListener):
          else:
             url += '&'
          url += f'littleflow-name={name}'
-         url += f'littleflow-name={base}'
+         url += f'&littleflow-base={base}'
          url += f'&littleflow-index={index}'
          url += f'&littleflow-workflow={workflow_id}'
 
@@ -101,7 +102,10 @@ class RequestTaskListener(EventListener):
             headers['Authorization'] = f'Bearer {self._credential_actor(input,parameters)}'
             if is_debug:
                logging.debug(f'Authorization: {headers["Authorization"]}')
-         data = template.format(input=input,parameters=parameters) if template is not None else input
+         data = template.format(input=input,parameters=parameters) if template is not None else json.dumps(input)
+         if is_debug and data is not None:
+            logging.debug("Request data:")
+            logging.debug(data)
          if task_name=='get':
             response = requests.get(url,headers=headers)
          elif task_name=='post':
@@ -115,6 +119,7 @@ class RequestTaskListener(EventListener):
 
          if is_debug:
             logging.debug(f'{response.status_code} response for {url}')
+            logging.debug(response.text)
 
          if error_on_status and (response.status_code<200 or response.status_code>=300):
             return self.fail(workflow_id,index,name,f'Request failed ({response.status_code}): {response.text}')
