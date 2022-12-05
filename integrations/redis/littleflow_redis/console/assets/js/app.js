@@ -1,4 +1,25 @@
 
+
+function waitForElement(selector) {
+   return new Promise(resolve => {
+      if (document.querySelector(selector)) {
+         return resolve(document.querySelector(selector));
+      }
+
+      const observer = new MutationObserver(mutations => {
+         if (document.querySelector(selector)) {
+            resolve(document.querySelector(selector));
+            observer.disconnect();
+         }
+      });
+
+      observer.observe(document.body, {
+         childList: true,
+         subtree: true
+      });
+   });
+}
+
 class App {
    constructor() {
       this.workflows = {}
@@ -169,8 +190,9 @@ class App {
       nav_html += "</ul>";
       let nav = $(nav_html).appendTo(content);
 
-      $(`<div class="mermaid ${workflow.orientation}">${workflow.graph.mermaid}</div>`).appendTo(content);
-      mermaid.init({}, $(workflow.item).find(".uk-accordion-content .mermaid"));
+      let diagram_id = `${workflow.id}-diagram`
+      $(`<div id="${diagram_id}" class="mermaid ${workflow.orientation}"></div>`).appendTo(content);
+      //mermaid.init({}, $(workflow.item).find(".uk-accordion-content .mermaid"));
       workflow.shown = true;
       // TODO: need a callback from above
       let self = this;
@@ -242,51 +264,54 @@ class App {
          workflow.states_shown = false
          this.showWorkflowTaskDetails(workflow);
       }
-      setTimeout(() => {
-         for (let g of $(workflow.item).find('svg .statediagram-state')) {
-            let id = g.getAttribute('id')
-            let parts = id.split('-');
+      waitForElement(`#${diagram_id}`).then((diagram) => {
+         console.log(diagram);
+         mermaid.render(`temp-${diagram_id}`,workflow.graph.mermaid,(svgCode,bindFunctions) => {
+            diagram.innerHTML = svgCode
+            for (let g of $(workflow.item).find('svg .statediagram-state')) {
+               let id = g.getAttribute('id')
+               let parts = id.split('-');
 
-            // Note: This is a bug in mermaid
-            if (parts[1].startsWith('</join>')) {
-              g.remove();
-              continue;
+               // Note: This is a bug in mermaid
+               if (parts[1].startsWith('</join>')) {
+               g.remove();
+               continue;
+               }
+               let [name,index] = parts[1].split(".")
+               let node =  {"element" : g, "name":name,"id":id, "index": parseInt(index)}
+               workflow.graph.tasks[parts[1]] = node
+               $(g).hover(() => {
+                  this.showWorkflowNode(workflow,node)
+               })
             }
-            let [name,index] = parts[1].split(".")
-            let node =  {"element" : g, "name":name,"id":id, "index": parseInt(index)}
-            workflow.graph.tasks[parts[1]] = node
-            $(g).hover(() => {
-               this.showWorkflowNode(workflow,node)
-            })
-         }
-         for (let g of $(workflow.item).find('svg .node.default')) {
-            let id = g.getAttribute('id')
-            let parts = id.split('-');
-            if (parts[1]=='root_start') {
-               workflow.graph.start = {"element" : g}
-            } else if (parts[1]=='root_end'){
-               workflow.graph.end = {"element" : g}
+            for (let g of $(workflow.item).find('svg .node.default')) {
+               let id = g.getAttribute('id')
+               let parts = id.split('-');
+               if (parts[1]=='root_start') {
+                  workflow.graph.start = {"element" : g}
+               } else if (parts[1]=='root_end'){
+                  workflow.graph.end = {"element" : g}
+               }
             }
-         }
-         self.updateGraphForWorkflow(workflow);
-         workflow.svg = $(workflow.item).find('.mermaid svg')[0];
-         workflow.svgContainer = $(workflow.item).find('.mermaid')[0];
-         // This is because UIkit messes with the size
-         setTimeout(() => {
-            $(workflow.svg).removeAttr('height')
-            $(workflow.svg).removeAttr('style')
-            workflow.zoomer = svgPanZoom(workflow.svg, {
-              zoomEnabled: true,
-              panEnabled: true,
-              dblClickZoomEnabled: true,
-              mouseWheelZoomEnabled: true,
-              controlIconsEnabled: true,
-              fit: true,
-              center: true,
-              contain: true
-            });
-         },10);
-
+            self.updateGraphForWorkflow(workflow);
+            workflow.svg = $(workflow.item).find('.mermaid svg')[0];
+            workflow.svgContainer = $(workflow.item).find('.mermaid')[0];
+            // This is because UIkit messes with the size
+            setTimeout(() => {
+               $(workflow.svg).removeAttr('height')
+               $(workflow.svg).removeAttr('style')
+               workflow.zoomer = svgPanZoom(workflow.svg, {
+               zoomEnabled: true,
+               panEnabled: true,
+               dblClickZoomEnabled: true,
+               mouseWheelZoomEnabled: true,
+               controlIconsEnabled: true,
+               fit: true,
+               center: true,
+               contain: true
+               });
+            },10);
+         });
       },100);
    }
 
