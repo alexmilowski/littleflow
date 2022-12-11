@@ -12,7 +12,7 @@ The [Redis](https://redis.io) integration provides:
  * a web-based console application for viewing and manipulating workflows
 
 This integration uses a library for interacting with [Redis streams](https://redis.io/docs/manual/data-types/streams/) called
-[Rqse](https://github.com/alexmilowski/rqse). This an encapsulation of a
+[Rqse](https://github.com/alexmilowski/rqse). This is an encapsulation of a
 [event-carried state transfer](https://martinfowler.com/articles/201701-event-driven.html)
 architecture that is used as the core of distributed execution of a workflow.
 
@@ -40,7 +40,7 @@ in a production context.*
 
 
 At minimum, you must run the workflow lifecycle and receipt log. The workflow
-lifecycle worker tracks when tasks ends to run the workflow algorithm forward as
+lifecycle worker tracks when tasks end to run the workflow algorithm forward as
 well as the overall lifecycle of the workflow.
 
 You can run the lifecycle worker with:
