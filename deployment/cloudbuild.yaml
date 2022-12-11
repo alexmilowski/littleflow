@@ -28,6 +28,7 @@ steps:
     export ARCHIVE=littleflow-redis-$${VERSION}-$${REDIS_VERSION}-${_PYTHON_VERSION}-${_ARCH}.pyz;
     echo "Building $${ARCHIVE}";
     echo "";
+    pip install shiv
     python -m shiv -o $${ARCHIVE} -e littleflow_redis:main . integrations/redis gunicorn[gevent];
 artifacts:
   objects:
