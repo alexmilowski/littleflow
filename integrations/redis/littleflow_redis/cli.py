@@ -24,7 +24,7 @@ def cli():
    pass
 
 @cli.command('run')
-@click.option('--stream',help='The event stream to use',default='workflows:run')
+@click.option('--stream',help='The event stream to use',default='workflows')
 @click.option('--workflow-id',help='The workflow identifier to use.')
 @click.option('--wait',is_flag=True)
 @click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
