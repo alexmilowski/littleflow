@@ -2,7 +2,7 @@ import sys
 from datetime import datetime, timezone
 import json
 from uuid import uuid4
-
+import logging
 
 import numpy as np
 from littleflow import Parser, Compiler, Runner, Context, FunctionTaskContext, Flow
@@ -34,6 +34,7 @@ class RemoteTaskContext(FunctionTaskContext):
       if invocation.name in self._lookup:
          return super().invoke(context,invocation,input)
 
+
       event = {'name':invocation.name,'base':invocation.name,'index':invocation.index,'workflow':self._workflow_id}
 
       if invocation.base is not None:
@@ -44,6 +45,8 @@ class RemoteTaskContext(FunctionTaskContext):
 
       if input is not None and len(input)>0:
          event['input'] = input
+
+      logging.info(f'Workflow {self._workflow_id} starting {invocation.name} ({invocation.index}) as {event["base"]}')
 
       self._client.append(message(event,kind='start-task'))
 
@@ -147,7 +150,10 @@ def load_workflow(client,key,return_json=False):
    value = client.get(key)
    if value is None:
       raise IOError(f'No workflow value at {key}')
-   object = json.loads(value.decode('UTF-8'))
+   raw_workflow = value.decode('UTF-8')
+   logging.debug(f'Restoring workflow from {key}')
+   logging.debug(raw_workflow)
+   object = json.loads(raw_workflow)
    f = Flow(serialized=object)
    return f if not return_json else (f,object)
 
@@ -278,29 +284,33 @@ class TaskEndListener(EventListener):
    def process(self,event_id, event):
       workflow_id = event.get('workflow')
       name = event.get('name')
+      base = event.get('base')
+      if base is None:
+         base = name
       index = event.get('index')
       outcome = event.get('status','SUCCESS')
       ok = outcome=='SUCCESS'
       if workflow_id is None:
-         print('The workflow attribute is missing.',file=sys.stderr)
+         logging.error('The workflow attribute is missing.')
          return False
       if name is None:
-         print('The task name attribute is missing.',file=sys.stderr)
+         logging.error('The task name attribute is missing.')
          name = '(UNKNOWN)'
       if index is None:
-         print('The task index attribute is missing.',file=sys.stderr)
+         logging.error('The task index attribute is missing.')
          return False
       if ok:
-         print(f'Workflow {workflow_id} end for task {name} ({index})')
+         logging.info(f'Workflow {workflow_id} end for task {name} ({index}) as {base}')
       else:
-         print(f'Workflow {workflow_id} failure for task {name} ({index})')
+         reason = event.get('reason','(UNKNOWN)')
+         logging.error(f'Workflow {workflow_id} failure for task {name} ({index}) as {base} : {reason}')
       key = self._prefix + workflow_id
 
       state = workflow_state(self.connection,key)
 
       if state!='RUNNING':
          if state=='TERMINATING':
-            print(f'Workflow {workflow_id} has been terminated')
+            logging.info(f'Workflow {workflow_id} has been terminated')
             state = 'TERMINATED'
             set_workflow_state(self.connection,key,state)
             self.append(message({'workflow':workflow_id },kind='terminated-workflow'))
@@ -309,9 +319,9 @@ class TaskEndListener(EventListener):
          elif state=='TERMINATED':
             pass
          else:
-            print(f'Workflow {workflow_id}: unable to handle end outcome for state {state}')
+            logging.error(f'Workflow {workflow_id}: unable to handle end outcome for state {state}')
       elif not ok:
-         print(f'Workflow {workflow_id} has failed')
+         logging.info(f'Workflow {workflow_id} has failed')
          state = 'FAILED'
          set_workflow_state(self.connection,key,state)
          self.append(message({'workflow':workflow_id },kind='failed-workflow'))
