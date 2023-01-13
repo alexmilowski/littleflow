@@ -30,7 +30,7 @@ class RedisOutputCache:
       return value
 
    def __setitem__(self,index,value):
-      if type(value)!=dict and type(value)!=list:
+      if not isinstance(value,dict) and not isinstance(value,list):
          raise ValueError(f'Incompatible type {type(value)}')
       key = f'{self._prefix}:output:{index}'
       self._client.set(key,json.dumps(value))
