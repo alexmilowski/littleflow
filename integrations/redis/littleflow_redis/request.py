@@ -12,6 +12,17 @@ from .context import RedisOutputCache, MetadataService
 def value_for(input,parameters,name,default=None):
    return input.get(name,parameters.get(name,default)) if input is not None else parameters.get(name,default) if parameters is not None else default
 
+class jsondict(dict):
+   def __str__(self):
+      return json.dumps(self)
+   def copy_of(other):
+      copy = jsondict()
+      for key, value in other.items():
+         if type(value)==dict:
+            value = jsondict.copy_of(value)
+         copy[key] = value
+      return copy
+
 class RequestTaskListener(EventListener):
 
    def __init__(self,key,credential_actor=None,group='request',host='0.0.0.0',port=6379,username=None,password=None,pool=None):
@@ -42,8 +53,8 @@ class RequestTaskListener(EventListener):
       if ns!='request':
          return False
 
-      input = event.get('input')
-      parameters = event.get('parameters')
+      input = jsondict.copy_of(event.get('input'))
+      parameters = jsondict.copy_of(event.get('parameters'))
 
       self.append(receipt_for(event_id))
 
