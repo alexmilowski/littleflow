@@ -1,12 +1,31 @@
+import os
 import collections
 import threading
 from dataclasses import dataclass
 from uuid import uuid4
+import logging
 
 from rqse import EventListener, message, receipt_for
+import redis
 from littleflow import merge
 
 from .context import RedisOutputCache
+
+def retry_output_cache_limit():
+   return int(os.environ.get('LITTLEFLOW_OUTPUT_CACHE_RETRY_LIMIT',10))
+
+def retry_output_cache(cache,index,value):
+   retries = 0
+   success = False
+   limit = retry_output_cache_limit()
+   while not success and retries < limit:
+      try:
+         cache[index] = value
+         success = True
+      except redis.exceptions.ConnectionError as ex:
+         logging.exception(ex)
+         logging.error(f'Connection reset while setting output of step {index}')
+         retries += 1
 
 @dataclass
 class TaskInfo:
@@ -63,8 +82,7 @@ class WaitForEventListener(EventListener):
          output = merge([self._match,output])
       if output is not None:
          cache = RedisOutputCache(self.connection,self._info.workflow_id)
-         cache[self._info.index] = output
-
+         retry_output_cache(cache,self._info.index,output)
       # Generate the end task
       event = {'name':self._info.name,'index':self._info.index,'workflow':self._info.workflow_id}
       self.append(message(event,kind='end-task'))
@@ -103,7 +121,7 @@ class Delay:
       self._wait.wait(self._delay)
       if self._info.input is not None:
          cache = RedisOutputCache(self.parent.connection,self._info.workflow_id)
-         cache[self._info.index] = self._info.input
+         retry_output_cache(cache,self._info.index,self._info.input)
       event = {'name':self._info.name,'index':self._info.index,'workflow':self._info.workflow_id}
       self.parent.append(message(event,kind='end-task'))
       self.stop()
