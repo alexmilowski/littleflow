@@ -197,6 +197,9 @@ The default lifecycle worker provides two built-in tasks:
 
  * `wait:delay` - a task for delaying a workflow by a certain time duration
  * `wait:event` - a task for waiting for a system event of a particular kind
+ * `wait:acquire` - acquires a countdown latch and increments the value
+ * `wait:release` - releases a countdown latch and decrements the value
+ * `wait:countdown` - waits for a countdown latch to go to zero
 
 The implementation of these can be found in [wait.py](https://github.com/alexmilowski/littleflow/blob/main/integrations/redis/littleflow_redis/wait.py) with the event
 listener in `WaitTaskListener`.
@@ -223,3 +226,41 @@ Parameters:
  * `event` - The kind of event to wait for
  * `match` - The keyword `input` to match the input against the event. Otherwise, no matching is performed.
  * `receipt` - A boolean indicated whether a receipt is generated for the event. The default is `true`.
+
+### wait:acquire
+
+```
+wait:acquire(- name: 'my-{input["id"]}')
+```
+
+Acquires a countdown latch and increments the value. A latch is not specific to a workflow so
+the name is global to the workflow engine's context.
+
+Parameters:
+ * `name` - The name of the latch which can also be a templated value.
+
+### wait:release
+
+```
+wait:release(- name: 'my-{input["id"]}')
+```
+
+Releases a countdown latch and decriments the value. A latch is not specific to a workflow so
+the name is global to the workflow engine's context.
+
+Parameters:
+ * `name` - The name of the latch which can also be a templated value.
+
+### wait:countdown
+
+```
+wait:countdown(- name: 'my-{input["id"]}')
+```
+
+Waits for a specific latch to reach zero before the task ends. A latch is not specific to a workflow so
+the name is global to the workflow engine's context. When the latch is released by any workflow, each
+workflow waiting will resume.
+
+Parameters:
+ * `name` - The name of the latch which can also be a templated value.
+
