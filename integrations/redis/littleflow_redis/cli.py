@@ -19,12 +19,20 @@ default_stream_key = 'workflows:run'
 default_workflows_key = 'workflows:all'
 default_inprogress_key = 'workflows:inprogress'
 
+def set_log_level(log_level='info'):
+   if log_level is not None:
+      n_log_level = getattr(logging, log_level.upper(), None)
+      if n_log_level is not None:
+         logging.basicConfig(level=n_log_level)
+         logging.info(f'Logging level is {log_level}')
+
+
 @click.group()
 def cli():
    pass
 
 @cli.command('run')
-@click.option('--stream',help='The event stream to use',default='workflows')
+@click.option('--stream',help='The event stream to use',default=default_stream_key)
 @click.option('--workflow-id',help='The workflow identifier to use.')
 @click.option('--wait',is_flag=True)
 @click.option('--host',help='The Redis server host',default=os.environ.get('REDIS_HOST','0.0.0.0'))
@@ -93,10 +101,7 @@ def run(stream,workflow_id,wait,host,port,username,password,workflow,input):
 @click.option('--log-level',help='Sets the log level',type=click.Choice(['debug','info','warning','error','critical']),default=os.environ.get('LOG_LEVEL'))
 def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,password,issuer,log_level):
 
-   if log_level is not None:
-      n_log_level = getattr(logging, log_level.upper(), None)
-      if n_log_level is not None:
-         logging.basicConfig(level=n_log_level)
+   set_log_level(log_level)
 
    auth_actor = None
 
@@ -243,7 +248,10 @@ def simulate(stream,group,wait_period,failures,host,port,username,password):
 @click.option('--port',help='The Redis server port',default=int(os.environ.get('REDIS_PORT',6379)))
 @click.option('--username',help='The Redis username',default=os.environ.get('REDIS_USERNAME'))
 @click.option('--password',help='The Redis authentication',default=os.environ.get('REDIS_PASSWORD'))
-def receipts(stream,host,port,username,password):
+@click.option('--log-level',help='Sets the log level',type=click.Choice(['debug','info','warning','error','critical']),default=os.environ.get('LOG_LEVEL'))
+def receipts(stream,host,port,username,password,log_level):
+
+   set_log_level(log_level)
 
    class ReceiptLog:
       def log(self,connection,id,receipt,target_id,target):
