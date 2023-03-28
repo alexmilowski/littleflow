@@ -215,41 +215,41 @@ class Parser:
             literal = LiteralSource(index,None)
             realize_step(literal)
          elif item.data=='empty_resource':
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='yaml_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.YAML
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='json_object_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.JSON_OBJECT
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='json_array_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.JSON_ARRAY
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='parameter_literal':
             literal = None
          elif item.data=='empty_parameter':
             literal = ParameterLiteral(None)
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='yaml_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.YAML)
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='json_object_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_OBJECT)
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='json_array_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_ARRAY)
-            literal.line = item.data.line
-            literal.column = item.data.column
+            literal.line = item.line
+            literal.column = item.column
          elif item.data=='task_list':
             assert len(item.children)==1, 'meet shorthand not supported'
          elif item.data=='task':
@@ -288,10 +288,10 @@ class Parser:
             workflow.declarations[key] = decl
             subject = decl
          else:
-            line = item.data.line
-            column = item.data.column
-            print(item.data)
-            print(item)
+            line = item.line
+            column = item.column
+            logging.error(item.data)
+            logging.error(str(item))
             assert False, f'{line}:{column} Cannot handle item: {item.data}'
 
       index += 1
