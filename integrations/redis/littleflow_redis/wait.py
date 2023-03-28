@@ -28,6 +28,21 @@ def retry_output_cache(cache,index,value):
          logging.error(f'Connection reset while setting output of step {index}')
          retries += 1
 
+def retry_output_cache_get(cache,index):
+   retries = 0
+   success = False
+   limit = retry_output_cache_limit()
+   value = None
+   while not success and retries < limit:
+      try:
+         value = cache[index]
+         success = True
+      except redis.exceptions.ConnectionError as ex:
+         logging.exception(ex)
+         logging.error(f'Connection reset while setting output of step {index}')
+         retries += 1
+   return value
+
 @dataclass
 class TaskInfo:
    workflow_id : str
@@ -165,14 +180,14 @@ class WaitTaskListener(EventListener):
          self._lock.release()
 
    def wait_for(self,info,event_name,send_receipt=True,match={}):
-      logging.info(f'Workflow {info.workflow_id} is waiting for event {event_name}',flush=True)
+      logging.info(f'Workflow {info.workflow_id} is waiting for event {event_name}')
       listener = WaitForEventListener(self._stream_key,self,info,event_name,send_receipt,match,pool=self.pool)
       if not self.start_work(listener):
          return False
       return True
 
    def delay(self,info,duration):
-      logging.info(f'Workflow {info.workflow_id} delay for {duration}',flush=True)
+      logging.info(f'Workflow {info.workflow_id} delay for {duration}')
       do_delay = Delay(self,info,duration)
       if not self.start_work(do_delay):
          return False
@@ -183,32 +198,41 @@ class WaitTaskListener(EventListener):
       latch_consumers = latch_name + ':consumers'
       return latch_name, latch_consumers
    
-   def aquire(self,info,name):
+   def acquire(self,info,name):
       latch_name, _ = self.latch_keys(info,name)
-      logging.info(f'Workflow {info.workflow_id} is acquiring {latch_name}',flush=True)
+      logging.info(f'Workflow {info.workflow_id} is acquiring {latch_name}')
       # We need to guarantee the count is positive
       value = self.connection.incr(latch_name)
       while value < 1:
-         logging.warning(f'Workflow {info.workflow_id} acquiring returned negative count {value} on {latch_name}',flush=True)
+         logging.warning(f'Workflow {info.workflow_id} acquiring returned negative count {value} on {latch_name}')
          value = self.connection.incr(latch_name)
+      return True
 
    def release(self,info,name):
       latch_name, latch_consumers = self.latch_keys(info,name)
-      logging.info(f'Workflow {info.workflow_id} is releasing {latch_name}',flush=True)
+      logging.info(f'Workflow {info.workflow_id} is releasing {latch_name}')
       value = self.connection.decr(latch_name)
       if value < 0:
-         logging.warning(f'Workflow {info.workflow_id} release returned negative count {value} on {latch_name}',flush=True)
+         logging.warning(f'Workflow {info.workflow_id} release returned negative count {value} on {latch_name}')
       if value <= 0:
-
          event = {'latch':latch_name,'consumers':latch_consumers}
          self.append(message(event,kind='countdown-latch-zero'))
+      return True
 
    def countdown(self,info,name):
       latch_name, latch_consumers = self.latch_keys(info,name)
-      logging.info(f'Workflow {info.workflow_id} is waiting for countdown on {latch_name}',flush=True)
+      event = {'name':info.name,'index':info.index,'workflow':info.workflow_id}
+      value = self.connection.get(latch_name)
+      if value is None or int(value)<=0:
+         cache = RedisOutputCache(self.connection,info.workflow_id)
+         retry_output_cache(cache,info.index,info.input)
+         logging.warning(f' {latch_name} is already zero or less for workflow {info.workflow_id}, ending immediately')
+         self.append(message(event,kind='end-task'))
+         return True
+
+      logging.info(f'Workflow {info.workflow_id} is waiting for countdown on {latch_name}')
       count = self.connection.incr(latch_consumers)
       consumer_info_key = f'{latch_name}:{count}'
-      event = {'name':info.name,'index':info.index,'workflow':info.workflow_id}
       consumer_info = json.dumps(event)
       self.connection.set(consumer_info_key,consumer_info)
       return True
@@ -243,6 +267,11 @@ class WaitTaskListener(EventListener):
                # send the end event
                try:
                   event = json.loads(raw_json.decode('UTF-8'))
+                  cache = RedisOutputCache(self.connection,event.get('workflow'))
+                  index = event.get('index')
+                  # The output is the input of the step so we get this from the cache
+                  step_input = retry_output_cache_get(cache,index-1)
+                  retry_output_cache(cache,index,step_input)
                   self.append(message(event,kind='end-task'))
                except ValueError as ex:
                   logging.error(f'Cannot parse consumer info at {consumer_info_key}: {ex}')
@@ -265,10 +294,10 @@ class WaitTaskListener(EventListener):
       if ns!='wait':
          return False
 
-      input = event.get('input')
+      step_input = event.get('input')
       parameters = event.get('parameters')
 
-      info = TaskInfo(workflow_id,index,name,input)
+      info = TaskInfo(workflow_id,index,name,step_input)
 
       self.append(receipt_for(event_id))
 
@@ -290,10 +319,10 @@ class WaitTaskListener(EventListener):
 
          match_kind = parameters.get('match',None)
          if match_kind=='input':
-            if input is None:
+            if step_input is None:
                match = {}
             else:
-               match = input if type(input)==dict else input[0]
+               match = step_input if type(step_input)==dict else step_input[0]
          else:
             match = {}
 
@@ -301,28 +330,46 @@ class WaitTaskListener(EventListener):
             return self.fail(workflow_id,index,name,f'Cannot acquire lock for {task_name} task')
       elif task_name=='acquire':
          name_template = parameters.get('name')
+         logging.info(f'name template: {name_template}')
+         if step_input is None:
+            step_input = {}
          try:
-            latch_name = name_template.format(input=input,parameters=parameters)
+            latch_name = name_template.format(input=step_input,parameters=parameters)
          except KeyError as ex:
             return self.fail(workflow_id,index,name,f'Undefined variable {ex} referenced in name template.')
          except ValueError as ex:
             return self.fail(workflow_id,index,name,f'Bad name value template ({ex}): {name_template}')
-         if not self.acquire(info,latch_name):
+         if self.acquire(info,latch_name):
+            cache = RedisOutputCache(self.connection,workflow_id)
+            retry_output_cache(cache,index,step_input)
+            event = {'name':name,'index':index,'workflow':workflow_id}
+            self.append(message(event,kind='end-task'))
+         else:
             return self.fail(workflow_id,index,name,f'Cannot perform acquire task.')
+         
       elif task_name=='release':
          name_template = parameters.get('name')
+         if step_input is None:
+            step_input = {}
          try:
-            latch_name = name_template.format(input=input,parameters=parameters)
+            latch_name = name_template.format(input=step_input,parameters=parameters)
          except KeyError as ex:
             return self.fail(workflow_id,index,name,f'Undefined variable {ex} referenced in name template.')
          except ValueError as ex:
             return self.fail(workflow_id,index,name,f'Bad name value template ({ex}): {name_template}')
-         if not self.release(info,latch_name):
+         if self.release(info,latch_name):
+            cache = RedisOutputCache(self.connection,workflow_id)
+            retry_output_cache(cache,index,step_input)
+            event = {'name':name,'index':index,'workflow':workflow_id}
+            self.append(message(event,kind='end-task'))
+         else:
             return self.fail(workflow_id,index,name,f'Cannot perform acquire task.')
       elif task_name=='countdown':
          name_template = parameters.get('name')
+         if step_input is None:
+            step_input = {}
          try:
-            latch_name = name_template.format(input=input,parameters=parameters)
+            latch_name = name_template.format(input=step_input,parameters=parameters)
          except KeyError as ex:
             return self.fail(workflow_id,index,name,f'Undefined variable {ex} referenced in name template.')
          except ValueError as ex:
