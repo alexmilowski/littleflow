@@ -1,0 +1,4 @@
+@flow redis-setget
+
+redis:set(- args: ['A','12345'] -) →
+redis:get(- args: ['A'] -)

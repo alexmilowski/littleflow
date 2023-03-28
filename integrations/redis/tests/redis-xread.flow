@@ -1,0 +1,3 @@
+@flow redis-xlen
+
+redis:xread(- {args: [COUNT,5,STREAMS,'workflows:run','0-0'], key: items} -)

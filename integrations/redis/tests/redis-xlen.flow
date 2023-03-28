@@ -1,0 +1,3 @@
+@flow redis-xlen
+
+redis:xlen(- {args: ['workflows:run'], key: length} -)

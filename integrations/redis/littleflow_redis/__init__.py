@@ -11,5 +11,6 @@ from .remote import RemoteTaskContext, RedisContext, TaskEndListener, TaskStartL
                     terminate_workflow, restart_workflow, get_failures, set_failures
 from .wait import WaitTaskListener
 from .request import RequestTaskListener
+from .redis import RedisTaskListener
 from .auth import create_jwt_credential_actor
 from .cli import cli as main

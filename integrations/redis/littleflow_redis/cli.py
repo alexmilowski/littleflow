@@ -11,7 +11,7 @@ import click
 from rqse import EventClient, receipt_for, message, ReceiptListener
 import redis
 
-from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener, WaitTaskListener, RequestTaskListener
+from littleflow_redis import run_workflow, TaskEndListener, TaskStartListener, LifecycleListener, WaitTaskListener, RequestTaskListener, RedisTaskListener
 from littleflow_redis import compute_vector, trace_vector
 from littleflow_redis import create_jwt_credential_actor
 
@@ -121,21 +121,27 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
    ending = threading.Thread(target=lambda : end_listener.listen())
    ending.start()
 
-   # we need something that will respond to end tasks and the algorithm forward
+   # This processes the wait steps
    wait_listener = WaitTaskListener(stream,host=host,port=port,username=username,password=password)
 
    wait = threading.Thread(target=lambda : wait_listener.listen())
    wait.start()
 
-   # we need something that will respond to end tasks and the algorithm forward
+   # This processes the request steps
    request_listener = RequestTaskListener(stream,credential_actor=auth_actor,host=host,port=port,username=username,password=password)
 
    request = threading.Thread(target=lambda : request_listener.listen())
    request.start()
 
+   # This processes the redis steps
+   redis_listener = RedisTaskListener(stream,host=host,port=port,username=username,password=password)
+
+   request = threading.Thread(target=lambda : redis_listener.listen())
+   request.start()
+
    # jut wait till tings are established
    max_wait = 5
-   while not end_listener.established and not wait_listener.established and not request_listener.established and max_wait>0:
+   while not end_listener.established and not wait_listener.established and not request_listener.established and not redis_listener.established and max_wait>0:
       sleep(1)
       max_wait -= 1
 
@@ -143,6 +149,7 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
    assert end_listener.established
    assert wait_listener.established
    assert request_listener.established
+   assert redis_listener.established
 
    recorder = LifecycleListener(stream,lifecycle_group,workflows_key=workflows,inprogress_key=inprogress,host=host,port=port,username=username,password=password)
 
@@ -157,6 +164,7 @@ def worker(stream,group,lifecycle_group,workflows,inprogress,host,port,username,
       end_listener.stop()
       wait_listener.stop()
       request_listener.stop()
+      redis_listener.stop()
       recorder.stop()
       print(f'Received interrupt, shutting down',flush=True)
 
