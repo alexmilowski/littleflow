@@ -17,7 +17,7 @@ from littleflow_redis import load_workflow, compute_vector, trace_vector, workfl
 from littleflow import graph
 
 class Config:
-   WORKFLOWS_STREAM = 'workflows'
+   WORKFLOWS_STREAM = 'workflows:run'
    WORKFLOWS_KEY = 'workflows:all'
    INPROGRESS_KEY = 'workflows:inprogress'
 
