@@ -24,7 +24,7 @@ class RedisOutputCache:
       return value
 
    def __getitem__(self,index):
-      value = self.get(value)
+      value = self.get(index)
       if value is None:
          raise KeyError(index)
       return value
