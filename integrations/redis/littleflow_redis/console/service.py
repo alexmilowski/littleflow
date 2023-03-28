@@ -6,8 +6,10 @@ import requests
 
 import littleflow_redis.console
 
-assets_dir = str(importlib.resources.path(sys.modules['littleflow_redis.console'],'assets'))
-templates_dir = str(importlib.resources.path(sys.modules['littleflow_redis.console'],'templates'))
+with importlib.resources.as_file(importlib.resources.files(sys.modules['littleflow_redis.console']).joinpath('templates')) as path:
+   templates_dir = str(path)
+with importlib.resources.as_file(importlib.resources.files(sys.modules['littleflow_redis.console']).joinpath('assets')) as path:
+   assets_dir = str(path)
 
 class Config:
    API = 'http://localhost:5000/'
