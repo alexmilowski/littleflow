@@ -1,5 +1,5 @@
-@flow delay
+@flow acquire-release
 
-wait:acquire (- name: 'my-{input["id"]}' -) →
+wait:acquire (- name: 'my-{input[id]}' -) →
 wait:delay (- duration: 10 -) →
-wait:release (- name: 'my-{input["id"]}' -) 
+wait:release (- name: 'my-{input[id]}' -) 

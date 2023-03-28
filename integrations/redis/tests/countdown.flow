@@ -1,0 +1,3 @@
+@flow countdown-latch
+
+wait:countdown (- name: 'my-{input[id]}' -)
