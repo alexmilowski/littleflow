@@ -255,16 +255,23 @@ class LifecycleListener(EventListener):
       workflow_id = event.get('workflow')
       if workflow_id is not None:
          if kind=='start-workflow':
+            logging.debug(f'Workflow {workflow_id} started')
             if self._workflows_key is not None:
+               logging.debug(f'Workflow {workflow_id} added to {self._workflows_key}')
                self.connection.lpush(self._workflows_key,workflow_id)
             if self._inprogress_key is not None:
+               logging.debug(f'Workflow {workflow_id} added to {self._inprogress_key}')
                self.connection.sadd(self._inprogress_key,workflow_id)
          elif kind=='end-workflow':
+            logging.debug(f'Workflow {workflow_id} ended')
             if self._inprogress_key is not None:
+               logging.debug(f'Workflow {workflow_id} removed from {self._inprogress_key}')
                self.connection.srem(self._inprogress_key,workflow_id)
             set_workflow_state(self.connection,workflow_id,'FINISHED')
          elif kind=='terminated-workflow' or kind=='failed-workflow':
+            logging.debug(f'Workflow {workflow_id} terminated')
             if self._inprogress_key is not None:
+               logging.debug(f'Workflow {workflow_id} removed from {self._inprogress_key}')
                self.connection.srem(self._inprogress_key,workflow_id)
       self.append(receipt_for(event_id))
       return True
