@@ -1,3 +1,4 @@
+import logging
 from lark import Lark, Token, Tree
 
 from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
@@ -215,41 +216,41 @@ class Parser:
             literal = LiteralSource(index,None)
             realize_step(literal)
          elif item.data=='empty_resource':
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='yaml_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.YAML
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='json_object_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.JSON_OBJECT
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='json_array_resource':
             literal.value = item.children[0].value if len(item.children)>0 else ''
             literal.type = LiteralType.JSON_ARRAY
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='parameter_literal':
             literal = None
          elif item.data=='empty_parameter':
             literal = ParameterLiteral(None)
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='yaml_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.YAML)
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='json_object_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_OBJECT)
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='json_array_parameter':
             literal = ParameterLiteral(item.children[0].value if len(item.children)>0 else '',LiteralType.JSON_ARRAY)
-            literal.line = item.line
-            literal.column = item.column
+            literal.line = item.meta.line
+            literal.column = item.meta.column
          elif item.data=='task_list':
             assert len(item.children)==1, 'meet shorthand not supported'
          elif item.data=='task':
@@ -288,8 +289,8 @@ class Parser:
             workflow.declarations[key] = decl
             subject = decl
          else:
-            line = item.line
-            column = item.column
+            line = item.meta.line
+            column = item.meta.column
             logging.error(item.data)
             logging.error(str(item))
             assert False, f'{line}:{column} Cannot handle item: {item.data}'
