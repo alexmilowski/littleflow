@@ -190,7 +190,7 @@ class App {
       nav_html += "</ul>";
       let nav = $(nav_html).appendTo(content);
 
-      let diagram_id = `${workflow.id}-diagram`
+      let diagram_id = `diagram-${workflow.id}`
       $(`<div id="${diagram_id}" class="mermaid ${workflow.orientation}"></div>`).appendTo(content);
       //mermaid.init({}, $(workflow.item).find(".uk-accordion-content .mermaid"));
       workflow.shown = true;

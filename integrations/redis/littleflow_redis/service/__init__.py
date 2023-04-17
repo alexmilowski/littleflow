@@ -1,8 +1,18 @@
 import sys
 import os
+import logging
 
 from .service import Config, service
 from .cli import main
+
+def set_loglevel(log_level):
+   if log_level is not None:
+      logging.info(f'Setting log level to {log_level.upper()}')
+      n_log_level = getattr(logging, log_level.upper(), None)
+      if n_log_level is not None:
+         logging.basicConfig(level=n_log_level)
+
+set_loglevel(os.environ.get('LOG_LEVEL'))
 
 __configured__ = None
 if 'SERVICE_CONFIG' in os.environ and __configured__ is None:
