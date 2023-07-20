@@ -47,6 +47,11 @@ tr.failed:nth-of-type(odd) {
    background-color: rgba(150,0,0,0.15) !important;
 }
 
+span.parameter {
+   padding-left: 3em;
+   font-size: 0.75em;
+}
+
 #upload-workflow {
    border: none;
    margin-top: 1em;

@@ -1,5 +1,3 @@
-
-
 function waitForElement(selector) {
    return new Promise(resolve => {
       if (document.querySelector(selector)) {
@@ -264,55 +262,57 @@ class App {
          workflow.states_shown = false
          this.showWorkflowTaskDetails(workflow);
       }
-      waitForElement(`#${diagram_id}`).then((diagram) => {
-         console.log(diagram);
-         mermaid.render(`temp-${diagram_id}`,workflow.graph.mermaid,(svgCode,bindFunctions) => {
-            diagram.innerHTML = svgCode
-            for (let g of $(workflow.item).find('svg .statediagram-state')) {
-               let id = g.getAttribute('id')
-               let parts = id.split('-');
+      Promise.resolve(waitForElement(`#${diagram_id}`)).then( async (diagram) => {
+         console.log(diagram.parentNode);
+         const { svg } = await mermaid.render('render', workflow.graph.mermaid);
+         diagram.innerHTML = svg
+         for (let g of $(workflow.item).find('svg .statediagram-state')) {
+            let id = g.getAttribute('id')
+            let parts = id.split('-');
 
-               // Note: This is a bug in mermaid
-               if (parts[1].startsWith('</join>')) {
+            // Note: This is a bug in mermaid
+            if (parts[1].startsWith('</join>')) {
                g.remove();
                continue;
-               }
-               let [name,index] = parts[1].split(".")
-               let node =  {"element" : g, "name":name,"id":id, "index": parseInt(index)}
-               workflow.graph.tasks[parts[1]] = node
-               $(g).hover(() => {
-                  this.showWorkflowNode(workflow,node)
-               })
             }
-            for (let g of $(workflow.item).find('svg .node.default')) {
-               let id = g.getAttribute('id')
-               let parts = id.split('-');
-               if (parts[1]=='root_start') {
-                  workflow.graph.start = {"element" : g}
-               } else if (parts[1]=='root_end'){
-                  workflow.graph.end = {"element" : g}
-               }
+            let [name,index] = parts[1].split(".")
+            let node =  {"element" : g, "name":name,"id":id, "index": parseInt(index)}
+            workflow.graph.tasks[parts[1]] = node
+            $(g).hover(() => {
+               this.showWorkflowNode(workflow,node)
+            })
+         }
+         for (let g of $(workflow.item).find('svg .node.default')) {
+            let id = g.getAttribute('id')
+            let parts = id.split('-');
+            if (parts[1]=='root_start') {
+               workflow.graph.start = {"element" : g}
+            } else if (parts[1]=='root_end'){
+               workflow.graph.end = {"element" : g}
             }
-            self.updateGraphForWorkflow(workflow);
-            workflow.svg = $(workflow.item).find('.mermaid svg')[0];
-            workflow.svgContainer = $(workflow.item).find('.mermaid')[0];
-            // This is because UIkit messes with the size
-            setTimeout(() => {
-               $(workflow.svg).removeAttr('height')
-               $(workflow.svg).removeAttr('style')
-               workflow.zoomer = svgPanZoom(workflow.svg, {
-               zoomEnabled: true,
-               panEnabled: true,
-               dblClickZoomEnabled: true,
-               mouseWheelZoomEnabled: true,
-               controlIconsEnabled: true,
-               fit: true,
-               center: true,
-               contain: true
-               });
-            },10);
-         });
-      },100);
+         }
+         self.updateGraphForWorkflow(workflow);
+         workflow.svg = $(workflow.item).find('.mermaid svg')[0];
+         console.log(workflow.svg)
+         workflow.svgContainer = $(workflow.item).find('.mermaid')[0];
+         //This is because UIkit messes with the size
+         setTimeout(() => {
+            $(workflow.svg).removeAttr('height')
+            $(workflow.svg).removeAttr('style')
+            workflow.zoomer = svgPanZoom(workflow.svg, {
+            zoomEnabled: true,
+            panEnabled: true,
+            dblClickZoomEnabled: true,
+            mouseWheelZoomEnabled: true,
+            controlIconsEnabled: true,
+            fit: true,
+            center: true,
+            contain: true
+            });
+         },10);
+      },100).catch(
+         error => console.log(error)
+      );
    }
 
    updateGraphForWorkflow(workflow) {
@@ -387,18 +387,29 @@ class App {
          return
       }
       let content = $(workflow.item).find(".uk-accordion-content");
-      let table = $('<table class="uk-table uk-table-striped"><caption>State Information</caption><thead></thead><tbody><tbody></table>').appendTo(content);
+      let table = $('<table class="uk-table uk-table-striped"><thead></thead><tbody><tbody></table>').appendTo(content);
       let head = $(table).find('thead')[0]
-      $("<tr><th>Index</th><th>Name</th><th>Type</th><th>Started</th><th>Ended</th></tr>").appendTo(head)
+      $("<tr><th>Index</th><th>Name</th><th>Base</th><th>Type</th><th>Started</th><th>Ended</th><th>Output</th></tr>").appendTo(head)
       let body = $(table).find('tbody')[0]
       workflow.states_shown = true;
       let rows = [];
       for (let item of workflow.definition.T) {
          let name = ""
+         let base = ""
          if (item[0]=='InvokeTask') {
-            name = item[1].name
+            name = item[1].name + "("
+            base = item[1].base!=undefined ? item[1].base : ""
+            if (item[1].parameters!={}) {
+               for (const [parameter, value] of Object.entries(item[1].parameters)) {
+                  name += '<br/>'
+                  name += `<span class='parameter'>${parameter} = ${value}</span>`
+               }
+               name += '<br/>'
+            }
+            name += ")"
          }
-         let row = $(`<tr><td>${item[1].index}</td><td>${name}</td><td>${item[0]}</td><td class='started'></td><td class='ended'></td></tr>`).appendTo(table);
+         let output = JSON.stringify(workflow.output[item[1].index]).replaceAll("'","&apos;")
+         let row = $(`<tr><td>${item[1].index}</td><td>${name}</td><td>${base}</td><td>${item[0]}</td><td class='started'></td><td class='ended'></td><td><span uk-tooltip='title: ${output}'>view</span></td></tr>`).appendTo(table);
          rows.push(row)
       }
       for (let [timestamp,S] of workflow.S) {
@@ -585,6 +596,7 @@ class App {
        .then(data => {
           workflow.state = data.state
           workflow.failures = data.failures
+          workflow.output = data.output
           setTimeout(callback,1)
        })
        .catch(error => {
