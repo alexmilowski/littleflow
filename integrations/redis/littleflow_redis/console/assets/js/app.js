@@ -21,6 +21,8 @@ function waitForElement(selector) {
 class App {
    constructor() {
       this.workflows = {}
+      this.page = 0
+      this.pageSize = 50
    }
    init() {
       for (let link of $("#main-nav a")) {
@@ -30,7 +32,7 @@ class App {
                $("#workflows").empty();
                this.workflows = {}
                // TODO: add pagination
-               this.fetchWorkflows(0,50);
+               this.fetchWorkflows(this.page*this.pageSize,this.pageSize);
             });
          } else if (href=='#restore') {
             $(link).click(() => {
@@ -66,11 +68,34 @@ class App {
                   this.uploadWorkflow(file);
                });
             });
+         } else if (href=='#previous-page') {
+            $(link).click(() => {
+               console.log('Previous page')
+               if (this.page>0) {
+                  $("#workflows").empty();
+                  this.workflows = {}
+                  this.page -= 1;
+                  this.fetchWorkflows(this.page*this.pageSize,this.pageSize);
+                  $("#page").text(`${this.page+1}`)
+
+               }
+            });
+         } else if (href=='#next-page') {
+            $(link).click(() => {
+               if (Object.keys(this.workflows).length==this.pageSize) {
+                  console.log('Next page')
+                  $("#workflows").empty();
+                  this.workflows = {}
+                  this.page += 1;
+                  this.fetchWorkflows(this.page*this.pageSize,this.pageSize);
+                  $("#page").text(`${this.page+1}`)
+               }
+            });
          }
 
       }
       // TODO: add pagination
-      this.fetchWorkflows(0,50)
+      this.fetchWorkflows(this.page*this.pageSize,this.pageSize);
    }
 
    _mangle(name) {
