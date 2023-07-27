@@ -116,7 +116,7 @@ def doc(no_docs,vertical,workflow):
          model = p.parse(input)
          flow = c.compile(model)
    except FileNotFoundError as ex:
-      print(f'Cannot open {file}',file=sys.stderr)
+      print(f'Cannot open {workflow}',file=sys.stderr)
 
    graph(flow,sys.stdout,embed_docs=not no_docs,left_to_right=not vertical)
 
