@@ -45,6 +45,6 @@ def graph(flow,output,format='mermaid',name='workflow',embed_docs=True,left_to_r
          target_name = graph_name(target,end=size-1)
          print(f'  {source_name}-->{target_name}',file=output)
          if  embed_docs and isinstance(target,InvokeTask) and target.doc is not None:
-            print(f'  note left of {target.name}',file=output)
+            print(f'  note left of {target_name}',file=output)
             print(f'    {shortdesc(target.doc)}',file=output)
             print(f'  end note',file=output)
