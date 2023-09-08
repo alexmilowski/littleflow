@@ -3,7 +3,8 @@
    "name": "littleflow-language",
    "displayName": "Littleflow Language",
    "description": "Syntax highlighting and language configuration for littleflow workflows",
-   "version": "0.0.1",
+   "version": "0.0.2",
+   "publisher": "Alex Miłowski",
    "engines": {
      "vscode": "^1.82.0"
    },
