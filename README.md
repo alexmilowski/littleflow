@@ -116,7 +116,7 @@ You can pip install the library:
 pip install littleflow
 ```
 
-Workflows are specify in a [language called littleflow](littleflow.md). This
+Workflows are specified in a [language called littleflow](littleflow.md). This
 workflow language allows you to describe the flow of steps as a graph and
 various parameters.
 

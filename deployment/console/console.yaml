@@ -21,7 +21,7 @@ spec:
         - |-
           set -e;
           export MODULE_DIR=/app/console_config;
-          mkdir ${MODULE_DIR};
+          mkdir -p ${MODULE_DIR};
           echo "class K8sConfig:" >> ${MODULE_DIR}/__init__.py;
           echo "   API='${SERVICE}'" >> ${MODULE_DIR}/__init__.py;
         volumeMounts:

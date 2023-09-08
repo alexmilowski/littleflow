@@ -14,7 +14,7 @@ the archives:
 make local-build
 ```
 
-And then copt them to S3:
+And then copy them to S3:
 
 ```
 aws s3 cp *.pyz s3://mybucket/littleflow/
@@ -129,6 +129,6 @@ kubectl apply -k ${NAME}/console
 The ARCHIVE_INIT is used to configure where the shiv archive is retrieved. This is typically a bucket stored in S3 or GCP Cloud Storage. The examples have the following roles:
 
  * Use [aws-init-archive.yaml](aws-init-archive.yaml) to pull from S3 using credentials in a secret
- * Use [gcp-init-archive.yaml](gcp-init-archive.yaml) to pull from GCP CLoud storage using using something like Workload identity
+ * Use [gcp-init-archive.yaml](gcp-init-archive.yaml) to pull from GCP Cloud storage using something like Workload Identity
  * Use [remote-init-archive.yaml](remote-init-archive.yaml) as an example to pull from a completed remote cluster (e.g., an on-prem cluster). This example shows how to use a google service account key.
 
