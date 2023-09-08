@@ -1,0 +1,30 @@
+
+{
+   "name": "littleflow-language",
+   "displayName": "Littleflow Language",
+   "description": "Syntax highlighting and language configuration for littleflow workflows",
+   "version": "0.0.1",
+   "engines": {
+     "vscode": "^1.82.0"
+   },
+   "categories": [
+     "Programming Languages"
+   ],
+   "repository": {
+      "type" : "git",
+      "url" : "https://github.com/alexmilowski/littleflow"
+   },
+   "contributes": {
+     "languages": [{
+       "id": "littleflow",
+       "aliases": ["Littleflow", "littleflow"],
+       "extensions": [".flow",".lf"],
+       "configuration": "./language-configuration.json"
+     }],
+     "grammars": [{
+       "language": "littleflow",
+       "scopeName": "source.littleflow",
+       "path": "./syntaxes/littleflow.tmLanguage.json"
+     }]
+   }
+ }

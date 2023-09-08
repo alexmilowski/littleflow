@@ -1,0 +1,129 @@
+{
+  "scopeName": "source.littleflow",
+  "name": "littleflow",
+  "fileTypes": [
+    "flow",
+    "lf"
+  ],
+  "patterns": [
+    {
+      "comment": "keyword for flow declaration",
+      "name": "keyword.declaration.flow.littleflow",
+      "match": "@flow"
+    },
+    {
+      "comment": "keyword for flow declaration",
+      "name": "keyword.declaration.task.littleflow",
+      "match": "@task"
+    },
+    {
+      "name": "operator.littleflow",
+      "match": "="
+    },
+    {
+      "name": "keyword.declaration.next.littleflow",
+      "match": "→"
+    },
+    {
+      "name": "keyword.declaration.join.littleflow",
+      "match": ">"
+    },
+    {
+			"begin": "(^[ \\t]+)?(?=#)",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.whitespace.comment.leading.littleflow"
+				}
+			},
+			"end": "(?!\\G)",
+			"patterns": [
+				{
+					"begin": "#",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.comment.littleflow"
+						}
+					},
+					"end": "\\n",
+					"name": "comment.line.number-sign.littleflow"
+				}
+			]
+		},
+    {
+      "name": "string.quoted.double.block.littleflow",
+      "begin": "(\"\"\")",
+      "beginCaptures": [
+        {
+          "1": null,
+          "name": "punctuation.definition.string.begin.littleflow"
+        }
+      ],
+      "end": "((?<=\"\"\")(\")\"\"|\"\"\")",
+      "endCaptures": [
+        {
+          "1": null,
+          "name": "punctuation.definition.string.end.littleflow"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.block.littleflow",
+      "begin": "(''')",
+      "beginCaptures": [
+        {
+          "1": null,
+          "name": "punctuation.definition.string.begin.littleflow"
+        }
+      ],
+      "end": "((?<=''')(')''|''')",
+      "endCaptures": [
+        {
+          "1": null,
+          "name": "punctuation.definition.string.end.littleflow"
+        }
+      ]
+    },
+    {
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.littleflow"
+        }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.littleflow"
+        }
+      },
+      "name": "string.quoted.double.littleflow",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.littleflow"
+        }
+      ]
+    },
+    {
+      "begin": "'",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.littleflow"
+        }
+      },
+      "end": "'",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.littleflow"
+        }
+      },
+      "name": "string.quoted.single.littleflow",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.littleflow"
+        }
+      ]
+}
+    ]
+}
