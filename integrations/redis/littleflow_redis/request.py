@@ -74,6 +74,13 @@ class RequestTaskListener(EventListener):
          logging.debug(f'base_url={base_url}')
          logging.debug(f'url={url}')
 
+      if url is not None:
+         try:
+            url = url.format(input=input,parameters=parameters) 
+         except Exception as ex:
+            logging.error(f'Unable to format url "{url}" due to: {ex}')
+            return self.fail(workflow_id,index,name,f'Unabled to send request due to url format error on "{url}": {ex}')
+
       if base_url is not None:
          url = urljoin(base_url,url)
 
@@ -82,6 +89,11 @@ class RequestTaskListener(EventListener):
          
       template = value_for(input,parameters,'template')
       content_type = value_for(input,parameters,'content_type','application/json')
+      try:
+         content_type = content_type.format(input=input,parameters=parameters) 
+      except Exception as ex:
+         logging.error(f'Unable to format content_type "{content_type}" due to: {ex}')
+         return self.fail(workflow_id,index,name,f'Unabled to send request due to content_type format error on "{content_type}": {ex}')
       use_context_parameters = bool(value_for(input,parameters,'use_context_parameters',True))
       output_modes = value_for(input,parameters,'output_mode',[])
       if type(output_modes)==str:
@@ -152,7 +164,8 @@ class RequestTaskListener(EventListener):
                      logging.debug(response.text)
                   output['response'] = response.json()
          except Exception as ex:
-            logging.exception(f'Unabled to process output of {name} due to exception.')
+            logging.exception(ex)
+            logging.error(f'Unabled to process output of {name} due to exception.')
             return self.fail(workflow_id,index,name,f'Unabled to process response output due to exception: {ex}')
 
          self.output_for(workflow_id,index,output)
@@ -164,5 +177,6 @@ class RequestTaskListener(EventListener):
          return True
 
       except Exception as ex:
-         logging.exception(f'Unabled to send {name} due to exception.')
+         logging.exception(ex)
+         logging.error(f'Unabled to send {name} due to exception.')
          return self.fail(workflow_id,index,name,f'Unabled to send request due to exception: {ex}')
