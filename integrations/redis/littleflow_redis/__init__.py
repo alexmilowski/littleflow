@@ -1,7 +1,7 @@
 '''
 An integration of littleflow an Redis for remote execution.
 '''
-__version__=(0,8,0)
+__version__=(0,9,0)
 __author__='Alex Miłowski'
 __author_email__='alex@milowski.com'
 
