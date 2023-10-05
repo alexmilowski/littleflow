@@ -81,6 +81,10 @@ input[type=file]::file-selector-button {
    margin-bottom: 0.2rem;
    padding-bottom: 0.2rem;
 }
+
+#workflows li > a {
+   margin-right: 0.125em;
+}
 .mermaid {
    padding: 0.5em 0.5em;
    margin-top: 0.5em;
@@ -141,3 +145,4 @@ input[type=file]::file-selector-button:hover {
 #workflow li > a[href='#trash'] {
    display: none;
 }
+
