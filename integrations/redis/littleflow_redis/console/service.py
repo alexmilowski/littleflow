@@ -4,6 +4,7 @@ import importlib.resources
 from flask import Flask, request, jsonify, current_app, g, render_template, send_from_directory
 import requests
 
+import littleflow
 import littleflow_redis.console
 
 with importlib.resources.as_file(importlib.resources.files(sys.modules['littleflow_redis.console']).joinpath('templates')) as path:
@@ -17,9 +18,24 @@ class Config:
 service = Flask('console',template_folder=templates_dir)
 service.config.from_object(Config())
 
+def version_info():
+   info = {
+      'littleflow' : 'v' + '.'.join(map(str,littleflow.__version__)),
+      'littleflow_redis' : 'v' + '.'.join(map(str,littleflow_redis.__version__)),
+   }
+   return info
+
 @service.route('/')
 def index():
-   return render_template('index.html')
+   return render_template('index.html',version=version_info())
+
+@service.route('/version')
+def version():
+   return jsonify(version_info())
+
+@service.route('/workflow')
+def workflow():
+   return render_template('workflow.html',version=version_info())
 
 @service.route('/assets/<path:path>')
 def assets(path):

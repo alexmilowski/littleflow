@@ -25,6 +25,13 @@ class App {
       this.pageSize = 50
    }
    init() {
+      if ($("#workflows").length>0) {
+         this.initWorkflowsView();
+      } else if ($("#workflow").length>0) {
+         this.initWorkflowView()
+      }
+   }
+   initWorkflowsView() {
       for (let link of $("#main-nav a")) {
          let href = $(link).attr('href');
          if (href=='#refresh') {
@@ -98,6 +105,27 @@ class App {
       this.fetchWorkflows(this.page*this.pageSize,this.pageSize);
    }
 
+   initWorkflowView() {
+      console.log("Initializing workflow view")
+      console.log(window.location.search)
+      let params = new URLSearchParams(window.location.search)
+      let workflow_id = params.get("id")
+      if (!workflow_id) {
+         UIkit.notification("The id parameter was not specified.", {status:'warning'})
+         return
+      }
+      workflow = {
+         id : workflow_id,
+         status: 'UNKNOWN',
+         loaded: false,
+         item: $("#workflow")[0],
+         orientation: 'horizontal'
+      }
+      this.workflows[workflow.id] = workflow
+      $("#workflow-id").text(workflow.id)
+      this.showWorkflowDetails(workflow,"#workflow-content","#workflow-state")
+   }
+
    _mangle(name) {
       return name==undefined ? name : name.replaceAll(":","_COLON_").replaceAll("-","_HYPHEN_")
    }
@@ -142,7 +170,7 @@ class App {
       if (exists) {
          return;
       }
-      let item = $(`<li><a class="uk-accordion-title" href="#"><span class="uk-width-expand" uk-leader>${workflow.id}</span><span class='state'>${workflow.state}</span></a><div class="uk-accordion-content"><div uk-spinner></div></div></li>`);
+      let item = $(`<li><a class="copy" href="#copy" uk-icon="icon: copy" title="copy workflow id"></a><a class="open" href="#open" uk-icon="icon: push" title="open workflow in new window"></a><a class="expand uk-accordion-title" href="#"><span class="uk-width-expand" uk-leader>${workflow.id}</span><span class='state'>${workflow.state}</span></a><div class="uk-accordion-content"><div uk-spinner></div></div></li>`);
       if (append) {
          $(item).appendTo("#workflows")
       } else {
@@ -153,13 +181,32 @@ class App {
       workflow.shown = false;
       workflow.states_shown = false
       $(item)
-        .find("a")
-        .click(() => {
-           this.showWorkflowDetails(workflow);
+        .find("a.expand")
+        .on("click",() => {
+           this.showWorkflowDetails(workflow,".uk-accordion-content",".state")
+        });
+      $(item)
+        .find("a.expand")
+        .on("dblclick",() => {
+           navigator.clipboard.writeText(workflow.id).then(() => {
+             UIkit.notification("<span uk-icon='icon: check'></span> Copied workflow id");
+           });
+        });
+      $(item)
+        .find("a.copy")
+        .on("click",() => {
+           navigator.clipboard.writeText(workflow.id).then(() => {
+            UIkit.notification("<span uk-icon='icon: check'></span> Copied workflow id");
+         });
+        });
+      $(item)
+        .find("a.open")
+        .on("click",() => {
+           window.open(`/workflow?id=${workflow.id}`,workflow.id)
         });
    }
 
-   showWorkflowDetails(workflow) {
+   showWorkflowDetails(workflow,findContent,findState) {
       if (!workflow.loaded) {
          this.fetchWorkflowGraph(
             workflow,
@@ -174,7 +221,7 @@ class App {
                               workflow,
                               () => {
                                  workflow.loaded = true
-                                 this.showWorkflowDetails(workflow)
+                                 this.showWorkflowDetails(workflow,findContent,findState)
                               }
                            );
                         }
@@ -189,9 +236,9 @@ class App {
          return;
       }
       console.log(`Loaded ${workflow.id} ${workflow.state}`)
-      $(workflow.item).find(".state").empty().text(workflow.state);
-      $(workflow.item).find(".uk-accordion-content").empty();
-      let content = $(workflow.item).find(".uk-accordion-content");
+      $(workflow.item).find(findState).empty().text(workflow.state);
+      $(workflow.item).find(findContent).empty();
+      let content = $(workflow.item).find(findContent);
       let nav_html = '<ul class="uk-iconnav">'
       let icons = [["info","show states"],["refresh","refresh workflow"],[workflow.orientation=='horizontal' ? "arrow-down" : "arrow-right","change orientation","orientation"],["download","download workflow state"],["copy","copy workflow state"]]
       if (workflow.state=='TERMINATED' || workflow.state=='FAILED') {
@@ -228,17 +275,16 @@ class App {
             $(link).click(() => {
                workflow.loaded = false;
                workflow.shown = false;
-               this.showWorkflowDetails(workflow);
+               this.showWorkflowDetails(workflow,findContent,findState);
             });
          } else if (href=='#info') {
             $(link).click(() => {
                if (workflow.states_shown) {
-                  let content = $(workflow.item).find(".uk-accordion-content");
                   $(content).find("table").remove();
                   workflow.states_shown = false
                   $(link).attr("title","show states")
                } else {
-                  this.showWorkflowTaskDetails(workflow);
+                  this.showWorkflowTaskDetails(workflow,findContent);
                   $(link).attr("title","hide states")
                }
             });
@@ -253,12 +299,12 @@ class App {
                }
                workflow.loaded = false;
                workflow.shown = false;
-               this.showWorkflowDetails(workflow);
+               this.showWorkflowDetails(workflow,findContent,findState);
             });
          } else if (href=='#play') {
             $(link).click(() => {
                UIkit.modal.confirm(`Are you sure you want to restart workflow ${workflow.id}`).then(() => {
-                  this.restartWorkflow(workflow);
+                  this.restartWorkflow(workflow,findContent,findState);
                });
             });
          } else if (href=='#copy') {
@@ -272,7 +318,7 @@ class App {
          } else if (href=='#ban') {
             $(link).click(() => {
                UIkit.modal.confirm(`Are you sure you want to stop workflow ${workflow.id}`).then(() => {
-                  this.terminateWorkflow(workflow);
+                  this.terminateWorkflow(workflow,findContent,findState);
                });
             });
          } else if (href=='#trash') {
@@ -285,11 +331,11 @@ class App {
       }
       if (workflow.states_shown) {
          workflow.states_shown = false
-         this.showWorkflowTaskDetails(workflow);
+         this.showWorkflowTaskDetails(workflow,findContent);
       }
       Promise.resolve(waitForElement(`#${diagram_id}`)).then( async (diagram) => {
          console.log(diagram.parentNode);
-         const { svg } = await mermaid.render('render', workflow.graph.mermaid);
+         const { svg } = await mermaid.render(`render-${diagram_id}`, workflow.graph.mermaid);
          diagram.innerHTML = svg
          for (let g of $(workflow.item).find('svg .statediagram-state')) {
             let id = g.getAttribute('id')
@@ -407,11 +453,11 @@ class App {
       //console.log(node);
    }
 
-   showWorkflowTaskDetails(workflow) {
+   showWorkflowTaskDetails(workflow,findContent) {
       if (workflow.states_shown) {
          return
       }
-      let content = $(workflow.item).find(".uk-accordion-content");
+      let content = $(workflow.item).find(findContent);
       let table = $('<table class="uk-table uk-table-striped"><thead></thead><tbody><tbody></table>').appendTo(content);
       let head = $(table).find('thead')[0]
       $("<tr><th>Index</th><th>Name</th><th>Base</th><th>Type</th><th>Started</th><th>Ended</th><th>Output</th></tr>").appendTo(head)
@@ -522,14 +568,14 @@ class App {
        })
    }
 
-   restartWorkflow(workflow) {
+   restartWorkflow(workflow,findContent,findState) {
       fetch(`service/workflows/${workflow.id}/restart`)
        .then(response => this.responseFilter(response))
        .then(data => {
           workflow.loaded = false;
           workflow.shown = false;
           setTimeout( () => {
-             this.showWorkflowDetails(workflow);
+             this.showWorkflowDetails(workflow,findContent,findState);
           },250);
        })
        .catch(error => {
@@ -543,14 +589,14 @@ class App {
        })
    }
 
-   terminateWorkflow(workflow) {
+   terminateWorkflow(workflow,findContent,findState) {
       fetch(`service/workflows/${workflow.id}/terminate`,{method:'POST',body:JSON.stringify({}),headers: {'Content-Type': 'application/json'}})
        .then(response => this.responseFilter(response))
        .then(data => {
           workflow.loaded = false;
           workflow.shown = false;
           setTimeout( () => {
-             this.showWorkflowDetails(workflow);
+             this.showWorkflowDetails(workflow,findContent,findState);
           },250);
        })
        .catch(error => {
