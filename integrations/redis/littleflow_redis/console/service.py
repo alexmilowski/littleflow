@@ -21,6 +21,10 @@ service.config.from_object(Config())
 def index():
    return render_template('index.html')
 
+@service.route('/workflow')
+def workflow():
+   return render_template('workflow.html')
+
 @service.route('/assets/<path:path>')
 def assets(path):
    return send_from_directory(assets_dir, path)
