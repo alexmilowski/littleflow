@@ -100,6 +100,15 @@ def error(message=None,data=None):
 def unavailable(message=None,data=None):
    return message_response('Unavailable',message=message,data=data)
 
+def version_info():
+   from littleflow import __version__ as lf_version
+   from littleflow_redis import __version__ as redis_version
+   info = {
+      'littleflow' : 'v' + '.'.join(map(str,lf_version)),
+      'littleflow_redis' : 'v' + '.'.join(map(str,redis_version)),
+   }
+   return info
+
 @service.route('/',methods=['GET'])
 @swag_from(defs)
 def index():
@@ -110,15 +119,13 @@ def index():
      - application/json
      responses:
         200:
-           description: The service status.
-           schema:
-              $ref: '#/definitions/StatusResponse'
+           description: The version information
         default:
            description: An error
            schema:
               $ref: '#/definitions/StatusResponse'
    """
-   return jsonify(success())
+   return jsonify(version_info())
 
 @service.route('/workflows',methods=['GET'])
 @swag_from(defs)

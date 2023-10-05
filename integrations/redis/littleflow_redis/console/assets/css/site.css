@@ -1,4 +1,11 @@
 
+.version {
+   font-size: 0.875em;
+   padding-left: 1em;
+   padding-top: 0.25em;
+   color: rgb(100,100,100);
+   margin-bottom: 0px;
+}
 #workflows .uk-width-expand {
    width: 80%;
 }
