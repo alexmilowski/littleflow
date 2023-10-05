@@ -67,20 +67,23 @@ input[type=file]::file-selector-button {
   font-size: 0.875rem;
 }
 
-#workflows .uk-accordion-content .uk-iconnav {
+#workflows .uk-accordion-content .uk-iconnav, #workflow .uk-iconnav {
    width: 90%;
    margin-left: 2em;
    margin-right: auto;
    margin-bottom: 0.2rem;
    padding-bottom: 0.2rem;
-   border-bottom: 1px solid rgba(50,50,50,0.25);
+}
+.mermaid {
+   padding: 0.5em 0.5em;
+   margin-top: 0.5em;
+   margin-left: 2em;
+   margin-right: auto;
+   background-color: rgba(230,230,230,0.25);
 }
 .mermaid svg {
    display: block;
    width: 90%;
-   margin-left: 2em;
-   margin-right: auto;
-   border-bottom: 1px solid rgba(50,50,50,0.25);
 }
 
 .mermaid.horizontal svg {
@@ -104,3 +107,30 @@ input[type=file]::file-selector-button:hover {
 }
 
 .svg-pan-zoom-control { position: relative; top: 50px;}
+
+.uk-accordion > li > a > svg {
+   vertical-align: baseline;
+}
+.uk-accordion-title::before {
+   float: left;
+}
+
+.uk-accordion-title {
+   display: inline;
+}
+
+#workflow > h1 {
+   font-size: 2em;
+}
+
+#workflow > h1 > #workflow-state {
+   float: right;
+}
+
+#workflow .mermaid, #workflow .uk-iconnav {
+   margin-left: 0.5em;
+}
+
+#workflow li > a[href='#trash'] {
+   display: none;
+}
