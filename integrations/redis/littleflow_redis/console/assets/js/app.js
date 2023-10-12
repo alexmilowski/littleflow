@@ -114,7 +114,7 @@ class App {
          UIkit.notification("The id parameter was not specified.", {status:'warning'})
          return
       }
-      workflow = {
+      let workflow = {
          id : workflow_id,
          status: 'UNKNOWN',
          loaded: false,
