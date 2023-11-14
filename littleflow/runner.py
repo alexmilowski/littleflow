@@ -25,6 +25,17 @@ def pass_input(func):
       setattr(func,'__invocation__',['input'])
    return func
 
+def task(registry=None,apply=True):
+   def register(func):
+      if hasattr(func,'__invocation__'):
+         getattr(func,'__invocation__').append('apply')
+      else:
+         setattr(func,'__invocation__',['apply'])
+      if registry is not None:
+         registry[func.__name__] = func
+      return func
+   return register
+
 class FunctionTaskContext(TaskContext):
 
    def __init__(self,lookup):
@@ -37,7 +48,16 @@ class FunctionTaskContext(TaskContext):
       if not isinstance(f,types.FunctionType):
          raise ValueError(f'Task {invocation.name} resolves to non-function')
       options = getattr(f,'__invocation__') if hasattr(f,'__invocation__') else []
-      args = [input] if 'input' in options else [{}]
+      if 'apply' in options:
+         match input:
+            case list():
+               args = input
+            case tuple():
+               args = list(input)
+            case _:
+               args = [input]
+      else:
+         args = [input] if 'input' in options else [{}]
       keywords = {}
       if invocation.parameters is not None:
          if 'raw_parameters' not in options:
@@ -45,7 +65,7 @@ class FunctionTaskContext(TaskContext):
                for key,value in invocation.parameters.items():
                   keywords[key] = value
             elif type(invocation.parameters)==list:
-               args += list
+               args += invocation.parameters
          else:
             args.append(invocation.parameters)
 
@@ -53,6 +73,8 @@ class FunctionTaskContext(TaskContext):
 
       if output is None:
          output = {}
+      elif type(output)==tuple:
+         output = list(output)
       elif type(output)!=dict and type(output)!=list:
          output = [output]
 
