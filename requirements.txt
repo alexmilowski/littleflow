@@ -2,3 +2,4 @@ lark
 numpy
 click
 pyyaml
+jsonpath2
