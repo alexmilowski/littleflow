@@ -51,32 +51,32 @@ class LogContext(Context):
       print(f'output → {value}')
 
    def output_for(self,index,value):
-      print(f'{index} → {value}')
+      print(f'O: {value} → {index}')
       super().output_for(index,value)
 
    def input_for(self,index):
       value = super().input_for(index)
-      print(f'{value} → {index}')
+      print(f'I: {value} → {index}')
       return value
 
    def end(self,tasks):
-      print('E',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.T.flatten()))
+      print('E:',str(self.S.flatten()),str(self.A.flatten()),str((1*tasks).flatten()),str(self.T.flatten()))
       super().end(tasks)
 
    def start(self,tasks):
       E = 1*tasks
-      print('S',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.T.flatten()))
+      print('S:',str(self.S.flatten()),str(self.A.flatten()),str(E.flatten()),str(self.T.flatten()))
       super().start(tasks)
 
    def start_task(self,invocation,input):
-      print(f'{input} → {invocation.index} ({invocation.name})')
+      print(f'T: {input} → {invocation.index} ({invocation.name})')
       self.output_for(invocation.index,input)
       super().start_task(invocation,input)
 
 @cli.command()
 @click.option('--limit',type=int,default=-1,help='Iteration limit')
 @click.option('--show-cache',is_flag=True)
-@click.option('--input',help='The workflow input')
+@click.option('-i','--input',help='The workflow input')
 @click.argument('workflow')
 def run(limit,show_cache,input,workflow):
 
