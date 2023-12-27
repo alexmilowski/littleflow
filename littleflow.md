@@ -819,14 +819,69 @@ stateDiagram-v2
 
 ```
 
-### Reserved words
+### Conditional execution
 
-A task may not have the following names:
+It can be useful to qualify whether a task should occur rather than have the decision within the task itself. Rather than implement a full imperative conditional, the language provides a single 
+expression guard for a task or subflow:
 
- * if
- * then
- * else
- * elif
+```
+A → ? `$[?(@.status=0)]` B
+```
+
+When the expression evaluates to true, then statement is equivalent to:
+
+```
+A → B
+```
+
+otherwise, it is equivalent to as if the guarded expression was not present:
+
+```
+A
+```
+
+A subflow can be used as well:
+
+```
+A → ? `$[?(@.status=0)]` { B → C }
+```
+
+Attempting to create mutually exclusive options that mimic if/then/else statements may required more forthought to create conditionals for each clause as each is treated separately.
+
+The expression evaluated is contained within back quotes and the preferred language is jsonpath [3]. 
+
+With conditional execution, the task or subflow is guarded but the place in the graph is the same. 
+
+Also, exceution becomes far more variable.
+
+Consider:
+
+```
+A → { ? `$[?(@.status=0)]` B
+      ? `$[?(@.status>0)]` C
+      ? `$[?(@.status>1)]` D  } → E
+```
+
+The possible execution traces are:
+
+```
+A → B → E      # sttaus = 0
+A → C → E      # status = 1
+A → C + D → E  # status = 2
+A → E          # status < 0
+```
+
+Finally, the guard is part of the step in the flow and does not apply to follow steps. For example, the follow flow the steps A and C are always executed and while the guard only applies to B.
+
+```
+A → ? `$[?(@.status=0)]` B → C
+```
+
+To make `B → C` conditional, a subflow must be used:
+
+```
+A → ? `$[?(@.status=0)]` { B → C }
+```
 
 ### Reserved labels
 
@@ -850,69 +905,6 @@ A subflow can be named and reused in a flow statement
 }
 
 X → D
-```
-### Conditional execution
-
-It can be useful to qualify whether a task should occur rather than have the decision within the task itself. Rather than implement a full imperative conditional, the language provides a single 
-expression guard for a task or subflow:
-
-```
-A → when `$[?(@.status=0)]` B
-```
-
-When the expression evaluates to true, then statement is equivalent to:
-
-```
-A → B
-```
-
-otherwise, it is equivalent to as if the guarded expression was not present:
-
-```
-A
-```
-
-A subflow can be used as well:
-
-```
-A → when `$[?(@.status=0)]` { B → C }
-```
-
-Attempting to create mutually exclusive options that mimic if/then/else statements may required more forthought to create conditionals for each clause as each is treated separately.
-
-The expression evaluated is contained within back quotes and the preferred language is jsonpath [3]. 
-
-With conditional execution, the task or subflow is guarded but the place in the graph is the same. 
-
-Also, exceution becomes far more variable.
-
-Consider:
-
-```
-A → { when `$[?(@.status=0)]` B
-      when `$[?(@.status>0)]` C
-      when `$[?(@.status>1)]` D  } → E
-```
-
-The possible execution traces are:
-
-```
-A → B → E      # sttaus = 0
-A → C → E      # status = 1
-A → C + D → E  # status = 2
-A → E          # status < 0
-```
-
-Finally, the guard is part of the step in the flow and does not apply to follow steps. For example, the follow flow the steps A and C are always executed and while the guard only applies to B.
-
-```
-A → when `$[?(@.status=0)]` B → C
-```
-
-To make `B → C` conditional, a subflow must be used:
-
-```
-A → when `$[?(@.status=0)]` { B → C }
 ```
 
 ### Iteration
