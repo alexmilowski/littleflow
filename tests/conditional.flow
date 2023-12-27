@@ -1,2 +1,2 @@
-when `$[?(@.status=0)]` A 
-when `$[?(@.status=1)]` B
+? `$[?(@.status=0)]` A 
+? `$[?(@.status=1)]` B
