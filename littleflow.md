@@ -715,29 +715,7 @@ The task parameters provided are the default values for the the task. An
 implementation must merge the task default parameters with the parameters
 specified in the flow statements.
 
-
-### Reserved words
-
-A task may not have the following names:
-
- * if
- * then
- * else
- * elif
-
-### Reserved labels
-
-A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the flow statement) and `:end` must be the right-most task (the end of the flow statement). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
-
-### Comments
-
-A comment starts with `#` and ends with a newline.
-
-## Extended features (future):
-
-The following are planned features compatible with the underlying theory.
-
-### Compact alternatives (or)
+### Compact alternatives (or) for meets and joins
 
 To facilitate meets and joins without labels, the vertical bar ('|') operator allows to list multiple tasks.
 
@@ -764,7 +742,33 @@ C → :meet ;
 :meet → D
 ```
 
+which are both equivalent to:
 
+```
+{ A B C } → D
+```
+
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  state _start_1_ <<fork>>
+  state "A" as A.2
+  state "B" as B.3
+  state "C" as C.4
+  state _end_5_ <<join>>
+  state "D" as D.6
+  [*]-->_start_1_
+  _start_1_-->A.2
+  _start_1_-->B.3
+  _start_1_-->C.4
+  A.2-->_end_5_
+  B.3-->_end_5_
+  C.4-->_end_5_
+  _end_5_-->D.6
+  D.6-->[*]
+
+```
 Also, a simple "fan out" or "join" can be represented as:
 
 ```
@@ -788,6 +792,65 @@ D → :join
 :join → C
 ```
 
+which are both equivalent to:
+
+```
+D → { A B C }
+```
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  state "D" as D.1
+  state _start_2_ <<fork>>
+  state "A" as A.3
+  state "B" as B.4
+  state "C" as C.5
+  state _end_6_ <<join>>
+  [*]-->D.1
+  D.1-->_start_2_
+  _start_2_-->A.3
+  _start_2_-->B.4
+  _start_2_-->C.5
+  A.3-->_end_6_
+  B.4-->_end_6_
+  C.5-->_end_6_
+  _end_6_-->[*]
+
+```
+
+### Reserved words
+
+A task may not have the following names:
+
+ * if
+ * then
+ * else
+ * elif
+
+### Reserved labels
+
+A label may have any name with the exception that `:start` and `:end` have special semantics. When used, `:start` must be the left-most task (the start of the flow statement) and `:end` must be the right-most task (the end of the flow statement). As a consequence, the `:start` and `:end` can only be used at the start and end of a flow statement.
+
+### Comments
+
+A comment starts with `#` and ends with a newline.
+
+## Extended features (future):
+
+The following are planned features compatible with the underlying theory.
+
+### Named subflows
+
+A subflow can be named and reused in a flow statement
+```
+@subflow X {
+  A
+  B → C
+}
+
+X → D
+```
 ### Conditionals
 
 Also, it can be useful to qualify whether a task should occur rather than have the decision within the task itself.
