@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 from dataclasses import dataclass, field
+from jsonpath2.path import Path
 
 @dataclass
 class Invocation:
@@ -26,10 +27,30 @@ class InvokeTask(Invocation):
    base: str = None
    doc: str = None
    merge: bool = False
+   guard: Path = None
 
 @dataclass
 class InvokeFlow(Invocation):
+   end: int
    merge: bool = False
+   guard: Path = None
+
+class Guard:
+   def __init__(self,source,expression):
+      try:
+         self._repr = expression
+         self._expr = Path.parse_str(expression)
+      except ValueError as ex:
+         raise ValueError(f'{source.line}:{source.column} Cannot parse guard `{expression}`: {ex}')
+
+   def __repr__(self):
+      return f'`{self._repr}`'
+
+   def matches(self,obj):
+      return [m.current_value for m in self._expr.match(obj)]
+   
+   def should_execute(self,obj):
+      return len(self.matches(obj))>0
 
 
 class Flow:

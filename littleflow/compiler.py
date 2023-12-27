@@ -1,9 +1,10 @@
 import json
 
 import yaml
+from jsonpath2.path import Path
 
 from .model import Workflow, SubFlow, Task, LiteralSource, Start, End, LiteralType
-from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow, StartFlow
+from .flow import Flow, Source, Sink, InvokeTask, InvokeFlow, StartFlow, Guard
 
 def compile_literal(text,type=LiteralType.EMPTY):
    if type==LiteralType.EMPTY:
@@ -76,7 +77,11 @@ class Compiler:
 
                except ValueError as ex:
                   raise ValueError(f'{step.parameters.line}:{step.parameters.column} {ex}')
-            flow[index] = InvokeTask(index,step.name,value,merge=step.merge)
+            if step.guard is not None:
+               guard = Guard(step,step.guard)
+            else:
+               guard = None
+            flow[index] = InvokeTask(index,step.name,value,merge=step.merge,guard=guard)
             if decl is not None:
                flow[index].doc = decl.doc
                flow[index].base = decl.base
@@ -87,7 +92,11 @@ class Compiler:
             except ValueError as ex:
                raise ValueError(f'{step.line}:{step.column} {ex}')
          elif isinstance(step,SubFlow):
-            flow[index] = InvokeFlow(index,merge=step.merge)
+            if step.guard is not None:
+               guard = Guard(step,step.guard)
+            else:
+               guard = None
+            flow[index] = InvokeFlow(index,end=step.named_inputs['end'].index,merge=step.merge,guard=guard)
          elif isinstance(step,Start):
             flow[index] = StartFlow(index)
          elif isinstance(step,End):
