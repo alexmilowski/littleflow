@@ -8,7 +8,7 @@ flow: (declaration | flow_statement)+
 declaration: DECLARE NAME (EQUAL NAME)? parameter_literal? doc_comment? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
 step: LABEL? (STAR | MERGE)? guarded? ( task_list | subflow) LABEL?
-guarded: "when" EXPR
+guarded: "?" EXPR
 task_list : task (OR task)*
 task: NAME parameter_literal?
 subflow: "{" flow_statement+ "}"
