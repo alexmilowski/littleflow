@@ -7,11 +7,11 @@ grammar = r"""
 flow: (declaration | flow_statement)+
 declaration: DECLARE NAME (EQUAL NAME)? parameter_literal? doc_comment? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
-step: LABEL? (STAR | MERGE)? (task_list | subflow | conditional) LABEL?
+step: LABEL? (STAR | MERGE)? guarded? ( task_list | subflow) LABEL?
+guarded: "when" EXPR
 task_list : task (OR task)*
 task: NAME parameter_literal?
 subflow: "{" flow_statement+ "}"
-conditional: "if" EXPR "then" step ("elif" EXPR "then" step)* ("else" step)?
 source: LABEL | resource | resource_literal
 destination: MERGE? (LABEL | resource)
 resource: URI parameter_literal?
@@ -166,6 +166,8 @@ class Parser:
             flow = SubFlow(index,merge=merge)
             workflow.flows.append(flow)
             start = Start(index)
+            if guard is not None:
+               flow.guard = guard
             if iterate:
                step = Iterate(flow)
                step.index = step.step.index
@@ -192,6 +194,7 @@ class Parser:
             before = True
             iterate = False
             merge = False
+            guard = None
             for child in item.children:
                if isinstance(child,Token) and child.type=='STAR':
                   iterate = True
@@ -204,6 +207,9 @@ class Parser:
                      output_label = child
                elif not isinstance(child,Token):
                   before = False
+         elif item.data=='guarded':
+            assert item.children[0].type=='EXPR', f'Unexpected expression type: {item.children[0].type}'
+            guard = item.children[0].value[1:-1]
          elif item.data=='source':
             if isinstance(item.children[0],Token) and item.children[0].type=='LABEL':
                statement.source = item.children[0].value[1:]
@@ -259,6 +265,8 @@ class Parser:
                flow = MeetShorthand(index,merge=merge)
                workflow.flows.append(flow)
                start = Start(index)
+               if guard is not None:
+                  flow.guard = guard
                if iterate:
                   step = Iterate(flow)
                   step.index = step.step.index
@@ -285,6 +293,8 @@ class Parser:
             step = Task(index,item.children[0].value,merge=merge)
             step.line = item.children[0].line
             step.column = item.children[0].column
+            if guard is not None:
+               step.guard = guard
             if iterate:
                step = Iterate(step)
                step.index = step.step.index

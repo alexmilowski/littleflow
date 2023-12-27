@@ -65,6 +65,7 @@ class Task(Step):
    index : int
    name : str
    merge : bool = False
+   guard : str = None
    line : int = 0
    column : int = 0
    parameters : ParameterLiteral = None
@@ -82,6 +83,7 @@ class Statement:
 class SubFlow(Step):
    index : int
    merge : bool = False
+   guard : str = None
    named_inputs : dict = field(default_factory=dict)
    named_outputs : dict = field(default_factory=dict)
    statements : list[Statement] = field(default_factory=list)
