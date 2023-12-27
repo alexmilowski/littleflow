@@ -176,6 +176,12 @@ class Context:
             if isinstance(invocation,InvokeTask):
                if invocation.merge:
                   input = merge(input)
+               if invocation.guard is not None:
+                  if not invocation.guard.should_execute(input):
+                     self.output_for(index,input)
+                     immediate[index] = 1
+                     continue
+
                self.start_task(invocation,input)
             elif isinstance(invocation,Source):
                self.output_for(index,invocation.value)
@@ -188,6 +194,12 @@ class Context:
             elif isinstance(invocation,InvokeFlow):
                if invocation.merge:
                   input = merge(input)
+               if invocation.guard is not None:
+                  if not invocation.guard.should_execute(input):
+                     self.output_for(invocation.end,input)
+                     immediate[invocation.end] = 1
+                     continue
+
                self.output_for(index,input)
                immediate[index] = 1
             elif isinstance(invocation,StartFlow):
