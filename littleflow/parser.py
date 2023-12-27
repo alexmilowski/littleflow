@@ -1,7 +1,7 @@
 import logging
 from lark import Lark, Token, Tree
 
-from .model import Workflow, Declaration, SubFlow, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
+from .model import Workflow, Declaration, SubFlow, MeetShorthand, Statement, Start, End, Iterate, Task, LiteralSource, ResourceSource, ResourceSink, ParameterLiteral, LiteralType
 
 grammar = r"""
 flow: (declaration | flow_statement)+
@@ -127,7 +127,7 @@ class Parser:
 
       for at_start, item in iter_tree(ast):
          if not at_start:
-            if item.data=='subflow':
+            if item.data=='subflow' or (item.data=='task_list' and len(item.children)>1):
                index += 1
                end.index = index
                workflow.indexed.append(end)
@@ -252,8 +252,35 @@ class Parser:
             literal.line = item.meta.line
             literal.column = item.meta.column
          elif item.data=='task_list':
-            assert len(item.children)==1, 'meet shorthand not supported'
+            if len(item.children)>1:
+               # create a subflow for the list of tasks
+               ancestors.append((flow,statement))
+               index += 1
+               flow = MeetShorthand(index,merge=merge)
+               workflow.flows.append(flow)
+               start = Start(index)
+               if iterate:
+                  step = Iterate(flow)
+                  step.index = step.step.index
+                  realize_step(step)
+               else:
+                  realize_step(flow)
+               flow.named_outputs['start'] = start
+               end = End(-1)
+               flow.named_inputs['end'] = end
+               flow.named_inputs['start'] = start
+
+
          elif item.data=='task':
+            if isinstance(flow,MeetShorthand):
+               # Create a new statement context for the task list
+               iterate = False
+               step = None
+               source = None
+               source_labeled = False
+               statement = Statement()
+               find_position(item,statement)
+               flow.statements.append(statement)
             index += 1
             step = Task(index,item.children[0].value,merge=merge)
             step.line = item.children[0].line

@@ -87,6 +87,10 @@ class SubFlow(Step):
    statements : list[Statement] = field(default_factory=list)
 
 @dataclass
+class MeetShorthand(SubFlow):
+   pass
+
+@dataclass
 class Declaration:
    kind : str
    name : str
