@@ -5,7 +5,7 @@ from .model import Workflow, Declaration, SubFlow, MeetShorthand, Statement, Sta
 
 grammar = r"""
 flow: (declaration | flow_statement)+
-declaration: DECLARE NAME (EQUAL NAME)? parameter_literal? doc_comment? ";"?
+declaration: DECLARE NAME (EQUAL NAME)? parameter_literal? doc_comment? subflow? ";"?
 flow_statement: (source ARROW)? step (ARROW step)* (ARROW destination)? ";"?
 step: LABEL? (STAR | MERGE)? guarded? ( task_list | subflow) LABEL?
 guarded: "?" EXPR
@@ -100,6 +100,8 @@ class Parser:
       source_labeled = False
       last_step = None
       ancestors = []
+      merge = False
+      guard = None
 
       def realize_step(step):
          nonlocal source_labeled, last_step
@@ -107,7 +109,7 @@ class Parser:
          if statement is not None:
             statement.steps.append(step)
          workflow.indexed.append(step)
-         if not source_labeled and statement.source is not None:
+         if not source_labeled and statement is not None and statement.source is not None:
             flow.named_inputs[statement.source] = step
             source_labeled = True
          if input_label is not None:
@@ -164,16 +166,21 @@ class Parser:
             ancestors.append((flow,statement))
             index += 1
             flow = SubFlow(index,merge=merge)
-            workflow.flows.append(flow)
-            start = Start(index)
-            if guard is not None:
-               flow.guard = guard
-            if iterate:
-               step = Iterate(flow)
-               step.index = step.step.index
-               realize_step(step)
+            if isinstance(subject,Declaration):
+               assert subject.base is None, f'Task declaration {subject.name} cannot have both an alias and subflow.'
+               subject.subflow = flow
+               workflow.indexed.append(flow)
             else:
-               realize_step(flow)
+               workflow.flows.append(flow)
+               if guard is not None:
+                  flow.guard = guard
+               if iterate:
+                  step = Iterate(flow)
+                  step.index = step.step.index
+                  realize_step(step)
+               else:
+                  realize_step(flow)
+            start = Start(index)
             flow.named_outputs['start'] = start
             end = End(-1)
             flow.named_inputs['end'] = end

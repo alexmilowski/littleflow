@@ -99,6 +99,7 @@ class Declaration:
    base : str = None
    doc : str = None
    parameters : ParameterLiteral = None
+   subflow : SubFlow = None
 
 @dataclass
 class Workflow:
