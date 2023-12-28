@@ -708,12 +708,57 @@ A task declaration provides additional information about tasks.
 ```
 @task A (- dry-run: false -) '''
 Task A has a single parameter of `dry-run` which is a boolean value.
-'''
+''';
 ```
 
 The task parameters provided are the default values for the the task. An
 implementation must merge the task default parameters with the parameters
 specified in the flow statements.
+
+A task declaration may be followed by alias, parameter literals, documentation,
+or a subflow. When a task has an alias, it may not have a subflow. Instead, the
+task will act as an invocation alias for the the second name.
+
+The order is always: name, optional alias, parameters, documentation, subflow.
+
+For example:
+
+```
+@task X = A (- {fruit: banana} -) ;
+
+X → B
+```
+
+is equivalent to:
+
+```
+A (- {fruit: banana} -) → B
+```
+
+When a task declaration is followed by a subflow, the subflow is executed in place of
+the task invocation. The subflow is invoked in the context of the invocating statement
+as if it was inline.
+
+For example:
+
+```
+@task X {
+  A
+  B → C
+}
+
+X → D
+```
+
+is equivalent to:
+
+```
+{ 
+  A
+  B → C 
+} → D
+```
+
 
 ### Compact alternatives (or) for meets and joins
 
@@ -894,18 +939,6 @@ A comment starts with `#` and ends with a newline.
 ## Extended features (future):
 
 The following are planned features compatible with the underlying theory.
-
-### Named subflows
-
-A subflow can be named and reused in a flow statement
-```
-@subflow X {
-  A
-  B → C
-}
-
-X → D
-```
 
 ### Iteration
 
