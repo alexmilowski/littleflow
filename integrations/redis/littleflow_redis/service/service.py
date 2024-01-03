@@ -134,22 +134,22 @@ def get_event_client():
       g.event_client = EventClient(current_app.config['WORKFLOWS_STREAM'],pool=get_pool())
    return g.event_client
 
-def message_response(status,message=None,data=None):
-   return 
-   msg = data.copy() if data is not None else {}
-   msg['status'] = status
-   if message is not None:
-      msg['message'] = message
-   return msg
+# def message_response(status,message=None,data=None):
+#    return 
+#    msg = data.copy() if data is not None else {}
+#    msg['status'] = status
+#    if message is not None:
+#       msg['message'] = message
+#    return msg
 
-def success(message=None,data=None):
-   return StatusResponse(status=StatusCode.Success,message=message,data=data)
+def success(message=None,workflow=None,uri=None):
+   return StatusResponse(status=StatusCode.Success,message=message,workflow=workflow,uri=uri)
 
-def error(message=None,data=None):
-   return StatusResponse(status=StatusCode.Error,message=message,data=data)
+def error(message=None):
+   return StatusResponse(status=StatusCode.Error,message=message)
 
-def unavailable(message=None,data=None):
-   return StatusResponse(status=StatusCode.Unavailable,message=message,data=data)
+def unavailable(message=None):
+   return StatusResponse(status=StatusCode.Unavailable,message=message)
 
 @service.route('/apispec.json')
 def apispec():
@@ -588,7 +588,7 @@ def archive_workflow(workflow_id):
 
       result_uri = f's3://{bucket}/{path}'
 
-      response = jsonify(success('Archive created',{'uri':result_uri}))
+      response = jsonify(success('Archive created',uri=result_uri))
       response.headers['Location'] = result_uri
       return response
    except ClientError as ex:
@@ -637,7 +637,7 @@ def service_restart_workflow(workflow_id):
    started = restart_workflow(get_event_client(),key,key)
 
    if started:
-      return jsonify(success(f'Restarted workflow {workflow_id}'))
+      return jsonify(success(f'Restarted workflow {workflow_id}',workflow=workflow_id))
    else:
       return jsonify(error(f'Restarting workflow {workflow_id} had no tasks to resume')), 400
 
@@ -734,7 +734,7 @@ def restore_workflow_from_archive():
 
    restore_workflow(event_client.connection,key,archive,workflows_key=current_app.config['WORKFLOWS_KEY'])
 
-   return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
+   return jsonify(success(f'Workflow restored as {workflow_id}',workflow=workflow_id))
 
 @service.route('/workflows/start',methods=['POST'])
 def start_workflow_post():
@@ -780,7 +780,7 @@ def start_workflow_post():
    event_client = get_event_client()
    try:
       workflow_id = run_workflow(workflow,event_client,input=input)
-      return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
+      return jsonify(success(f'Workflow restored as {workflow_id}',workflow=workflow_id))
    except Exception as ex:
       return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 
@@ -830,7 +830,7 @@ def start_workflow_upload():
    try:
       workflow_id = run_workflow(workflow,event_client,input=input)
       _, _, workflow_id = workflow_id.partition(':')
-      return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
+      return jsonify(success(f'Workflow restored as {workflow_id}',workflow=workflow_id))
    except Exception as ex:
       return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 

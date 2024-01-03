@@ -12,7 +12,8 @@ class StatusCode(Enum):
 class StatusResponse(BaseModel):
    status: StatusCode = StatusCode.Success
    message: str = ''
-   data: Any = None
+   workflow: str = None
+   uri: str = None
 
 class VersionInfo(BaseModel):
    littleflow: str
