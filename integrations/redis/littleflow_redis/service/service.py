@@ -143,13 +143,13 @@ def message_response(status,message=None,data=None):
    return msg
 
 def success(message=None,data=None):
-   return StatusReponse(status=StatusCode.Success,message=message,data=data)
+   return StatusResponse(status=StatusCode.Success,message=message,data=data)
 
 def error(message=None,data=None):
-   return StatusReponse(status=StatusCode.Error,message=message,data=data)
+   return StatusResponse(status=StatusCode.Error,message=message,data=data)
 
 def unavailable(message=None,data=None):
-   return StatusReponse(status=StatusCode.Unavailable,message=message,data=data)
+   return StatusResponse(status=StatusCode.Unavailable,message=message,data=data)
 
 @service.route('/apispec.json')
 def apispec():
