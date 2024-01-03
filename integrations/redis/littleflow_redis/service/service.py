@@ -162,7 +162,7 @@ def apidocs():
    with importlib.resources.as_file(importlib.resources.files(source_module).joinpath(f'service/elements.html')) as path:
       with open(path,'r') as raw:
          template = raw.read()
-   return render_template_string(template,url='/apispec.json')
+   return render_template_string(template,url='../apispec.json')
 
 @service.route('/',methods=['GET'])
 def index():
