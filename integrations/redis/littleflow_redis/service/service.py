@@ -782,6 +782,8 @@ def start_workflow_post():
       workflow_id = run_workflow(workflow,event_client,input=input)
       return jsonify(success(f'Workflow restored as {workflow_id}',workflow=workflow_id))
    except Exception as ex:
+      logging.exception(ex)
+      logging.error(f'Cannot run workflow due to: {ex}')
       return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 
 @service.route('/workflows/start/upload',methods=['POST'])
