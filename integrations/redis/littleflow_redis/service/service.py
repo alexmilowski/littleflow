@@ -514,6 +514,7 @@ def get_workflow_graph(workflow_id):
 @service.route('/workflows/<workflow_id>/archive',methods=['GET','POST'])
 def archive_workflow(workflow_id):
    """
+   ---
    get:
       description: |-
          Returns the workflow archive representation of the current state
@@ -604,6 +605,7 @@ def archive_workflow(workflow_id):
 @service.route('/workflows/<workflow_id>/restart',methods=['GET'])
 def service_restart_workflow(workflow_id):
    """
+   ---
    get:
       description: |-
          Restarts a workflow
@@ -651,6 +653,7 @@ def service_restart_workflow(workflow_id):
 @service.route('/workflows/restore',methods=['GET','POST'])
 def restore_workflow_from_archive():
    """
+   ---
    get:
       description: |-
          Restores a workflow from a URI
@@ -746,6 +749,7 @@ def restore_workflow_from_archive():
 @service.route('/workflows/start',methods=['POST'])
 def start_workflow_post():
    """
+   ---
    post:
       description: |-
          Starts a new workflow
@@ -796,6 +800,7 @@ def start_workflow_post():
 @service.route('/workflows/start/upload',methods=['POST'])
 def start_workflow_upload():
    """
+   ---
    post:
       description: |-
          Starts a new workflow from a form post where `input` is a text field
