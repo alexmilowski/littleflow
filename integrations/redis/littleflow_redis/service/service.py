@@ -143,7 +143,14 @@ def get_event_client():
 #    return msg
 
 def success(message=None,workflow=None,uri=None):
-   return StatusResponse(status=StatusCode.Success,message=message,workflow=workflow,uri=uri)
+   args = {}
+   if message is not None:
+      args['message'] = message
+   if workflow is not None:
+      args['workflow'] = workflow
+   if uri is not None:
+      args['uri'] = uri
+   return StatusResponse(status=StatusCode.Success,**args)
 
 def error(message=None):
    return StatusResponse(status=StatusCode.Error,message=message)
