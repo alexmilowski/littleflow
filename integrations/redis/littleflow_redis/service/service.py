@@ -283,7 +283,7 @@ def get_workflow(workflow_id):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    if request.method=='DELETE':
       if client.sismember(current_app.config['INPROGRESS_KEY'],key)>0:
          return jsonify(error(f'Workflow {workflow_id} is running and cannot be deleted.')), 400
@@ -323,7 +323,7 @@ def terminate(workflow_id):
    event_client = get_event_client()
    key = 'workflow:'+workflow_id
    if event_client.connection.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    terminated = terminate_workflow(event_client,key,workflow_id,inprogress_key=current_app.config['INPROGRESS_KEY'])
    return jsonify(success(f'Workflow {workflow_id} is {"terminated" if terminated else "terminating"}'))
 
@@ -386,7 +386,7 @@ def get_workflow_state(workflow_id):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
 
    state = workflow_state(client,key)
    if state is None:
@@ -449,9 +449,9 @@ def get_workflow_trace(workflow_id,kind):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if kind not in ['A','S']:
-      return error(f'Unrecognized trace {kind}'), 400
+      return jsonify(error(f'Unrecognized trace {kind}')), 400
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    response = []
    for tstamp, value in trace_vector(client,key+':'+kind):
       response.append([tstamp.isoformat(),value.flatten().tolist()])
@@ -495,7 +495,7 @@ def get_workflow_graph(workflow_id):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    left_to_right = True
    if request.args.get('orientation','horizontal')=='vertical':
       left_to_right = False
@@ -560,7 +560,7 @@ def archive_workflow(workflow_id):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    object = workflow_archive(client,key)
 
    if request.method=='GET':
@@ -571,13 +571,13 @@ def archive_workflow(workflow_id):
    uri = data.get('uri')
    if uri is not None:
       if not uri.startswith('s3://'):
-         return error('Malformed s3 uri: '+uri), 400
+         return jsonify(error('Malformed s3 uri: '+uri)), 400
       uri = uri[5:]
       bucket, _, path = uri.partition('/')
       if len(path)==0:
          path = workflow_id + '.json'
    elif bucket is None:
-      return error('The uri or bucket must be specified.'), 400
+      return jsonify(error('The uri or bucket must be specified.')), 400
    else:
       path = workflow_id + '.json'
 
@@ -592,7 +592,7 @@ def archive_workflow(workflow_id):
       response.headers['Location'] = result_uri
       return response
    except ClientError as ex:
-      return error('Error accessing bucket: '+str(ex)), 400
+      return jsonify(error('Error accessing bucket: '+str(ex))), 400
 
 @service.route('/workflows/<workflow_id>/restart',methods=['GET'])
 def service_restart_workflow(workflow_id):
@@ -629,17 +629,17 @@ def service_restart_workflow(workflow_id):
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
-      return error(f'Workflow {workflow_id} does not exist'), 404
+      return jsonify(error(f'Workflow {workflow_id} does not exist')), 404
    state = workflow_state(client,key)
    if state!='TERMINATED' and state!='FAILED':
-      return error(f'Workflow {workflow_id} cannot be restarted from current state {state}'), 400
+      return jsonify(error(f'Workflow {workflow_id} cannot be restarted from current state {state}')), 400
 
    started = restart_workflow(get_event_client(),key,key)
 
    if started:
-      return success(f'Restarted workflow {workflow_id}')
+      return jsonify(success(f'Restarted workflow {workflow_id}'))
    else:
-      return error(f'Restarting workflow {workflow_id} had no tasks to resume'), 400
+      return jsonify(error(f'Restarting workflow {workflow_id} had no tasks to resume')), 400
 
 @service.route('/workflows/restore',methods=['GET','POST'])
 def restore_workflow_from_archive():
@@ -693,7 +693,7 @@ def restore_workflow_from_archive():
       uri = request.args.get('uri')
       archive = None
       if uri is None:
-         return error(f'The uri parameter is missing'), 400
+         return jsonify(error(f'The uri parameter is missing')), 400
    elif request.method=='POST':
       workflow_id = request.args.get('workflow')
       uri = request.json.get('uri')
@@ -701,12 +701,12 @@ def restore_workflow_from_archive():
 
    if workflow_id is not None:
       if client.exists('workflow:'+key)==1:
-         return error(f'Workflow {workflow_id} already exists'), 400
+         return jsonify(error(f'Workflow {workflow_id} already exists')), 400
    else:
       workflow_id = str(uuid4())
 
    if uri is not None and not uri.startswith('s3://'):
-      return error(f'Only S3 URIs are currently supported'), 400
+      return jsonify(error(f'Only S3 URIs are currently supported')), 400
 
    if uri is not None:
       try:
@@ -716,17 +716,17 @@ def restore_workflow_from_archive():
          try:
             archive = json.loads(obj['Body'].read())
          except IOError as ex:
-            return error(f'Error reading archive: {ex}'), 400
+            return jsonify(error(f'Error reading archive: {ex}')), 400
       except ClientError as ex:
-         return error(f'Error accessing bucket: {ex}'), 400
+         return jsonify(error(f'Error accessing bucket: {ex}')), 400
 
    # quick check of archive:
    if type(archive)!=dict:
-      return error(f'Archive type is not an object: {type(dict)}'), 400
+      return jsonify(error(f'Archive type is not an object: {type(dict)}')), 400
 
    for key in ['F','T','A','S']:
       if key not in archive:
-         return error(f'Archive is missing key {key}'), 400
+         return jsonify(error(f'Archive is missing key {key}')), 400
 
    key = 'workflow:'+workflow_id
 
@@ -734,7 +734,7 @@ def restore_workflow_from_archive():
 
    restore_workflow(event_client.connection,key,archive,workflows_key=current_app.config['WORKFLOWS_KEY'])
 
-   return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+   return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
 
 @service.route('/workflows/start',methods=['POST'])
 def start_workflow_post():
@@ -775,14 +775,14 @@ def start_workflow_post():
       input = None
 
    if workflow is None or len(workflow)==0:
-      return error(f'No workflow was provided'), 400
+      return jsonify(error(f'No workflow was provided')), 400
 
    event_client = get_event_client()
    try:
       workflow_id = run_workflow(workflow,event_client,input=input)
-      return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+      return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
    except Exception as ex:
-      return error(f'Cannot compile workflow due to: {ex}'), 400
+      return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 
 @service.route('/workflows/start/upload',methods=['POST'])
 def start_workflow_upload():
@@ -822,7 +822,7 @@ def start_workflow_upload():
    elif 'workflow' in request.form:
       workflow = request.form.get('workflow')
    else:
-      return error('The workflow was not attached.'), 400
+      return jsonify(error('The workflow was not attached.')), 400
    input = request.form.get('input')
    if input is not None:
       input = json.loads(input)
@@ -830,9 +830,9 @@ def start_workflow_upload():
    try:
       workflow_id = run_workflow(workflow,event_client,input=input)
       _, _, workflow_id = workflow_id.partition(':')
-      return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
+      return jsonify(success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id}))
    except Exception as ex:
-      return error(f'Cannot compile workflow due to: {ex}'), 400
+      return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 
 
 with service.test_request_context():
