@@ -1,8 +1,10 @@
 rqse
 Flask
 click
-flasgger
 pyyaml
 requests
 boto3
 pyjwt[crypto]
+pydantic
+apispec
+apispec_webframeworks

@@ -2,9 +2,15 @@ import os
 import io
 import json
 from uuid import uuid4
+from enum import EnumMeta
+from typing import Union, Type
+from inspect import isclass
+from copy import deepcopy
+import builtins
+import importlib
+import logging
 
-from flask import Flask, request, jsonify, current_app, g
-from flasgger import Swagger, swag_from, validate
+from flask import Flask, request, jsonify, current_app, g, render_template_string
 import yaml
 import redis
 import boto3
@@ -13,8 +19,73 @@ from botocore.exceptions import ClientError
 # only needed for restarting
 from rqse import EventClient
 
+from apispec import APISpec
+from apispec_webframeworks.flask import FlaskPlugin
+
+from pydantic import BaseModel
+
 from littleflow_redis import load_workflow, compute_vector, trace_vector, workflow_state, delete_workflow, terminate_workflow, workflow_archive, restart_workflow, restore_workflow, run_workflow, get_failures, RedisOutputCache
 from littleflow import graph
+
+from .message import StatusResponse, StatusCode, ServiceJSONProvider, VersionInfo, WorkflowId, ArchiveLocation, Location, WorkflowStart
+
+def version_info():
+   from littleflow import __version__ as lf_version
+   from littleflow_redis import __version__ as redis_version
+   return 'v' + '.'.join(map(str,lf_version)),'v' + '.'.join(map(str,redis_version))
+
+_old_prefix = '#/definitions'
+def schema_fixup(item : dict):
+   item = deepcopy(item)
+   queue = [item]
+   while len(queue)>0:
+      current = queue.pop(0)
+      for value in current.values():
+         match type(value):
+            case builtins.dict:
+               queue.append(value)
+            case builtins.list:
+               for array_item in value:
+                  if type(array_item)==dict:
+                     queue.append(array_item)
+      if '$ref' in current:
+         value = current['$ref']
+         if value.startswith(_old_prefix):
+            current['$ref'] = '#/components/schemas'+value[len(_old_prefix):]
+   return item
+
+def enum_schema(e : EnumMeta):
+   return {
+      "type" : "string",
+      "enum" : [item.value for item in list(e)]
+   }
+
+api_version = version_info()
+spec = APISpec(
+   title="littleflow",
+   version=f'{api_version[1]} ({api_version[0]})',
+   openapi_version='3.0.2',
+   info={'descrition' : 'Littleflow service API'},
+   plugins=[FlaskPlugin()]
+)
+
+def add_type(name : str,schema : Union[dict,EnumMeta,Type[BaseModel]]):
+   if isclass(schema):
+      if isinstance(schema,EnumMeta):
+         schema = enum_schema(schema)
+      elif issubclass(schema,BaseModel):
+         schema = schema.schema()
+   spec.components.schema(name,schema_fixup(schema))
+
+for name, class_type in [(cls.__name__,cls) for cls in [
+   StatusResponse,
+   VersionInfo,
+   WorkflowId,
+   ArchiveLocation,
+   Location,
+   WorkflowStart
+]]:
+   add_type(name, class_type)
 
 class Config:
    WORKFLOWS_STREAM = 'workflows:run'
@@ -23,29 +94,8 @@ class Config:
 
 service = Flask('api')
 service.config.from_object(Config())
+service.json = ServiceJSONProvider(service)
 
-swag = Swagger(service)
-
-swag_def = """
-definitions:
-  WorkflowList:
-    type: array
-    items:
-       type: string
-  StatusResponse:
-    type: object
-    properties:
-       message:
-          type: string
-       data:
-          type: object
-       status:
-          $ref: '#/definitions/StatusCode'
-  StatusCode:
-    type: string
-    enum: ['Error','Success','Unavailable']
-"""
-defs = yaml.load(swag_def,Loader=yaml.Loader)
 
 def get_pool():
    if 'pool' not in g:
@@ -85,6 +135,7 @@ def get_event_client():
    return g.event_client
 
 def message_response(status,message=None,data=None):
+   return 
    msg = data.copy() if data is not None else {}
    msg['status'] = status
    if message is not None:
@@ -92,58 +143,60 @@ def message_response(status,message=None,data=None):
    return msg
 
 def success(message=None,data=None):
-   return message_response('Success',message=message,data=data)
+   return StatusReponse(status=StatusCode.Success,message=message,data=data)
 
 def error(message=None,data=None):
-   return message_response('Error',message=message,data=data)
+   return StatusReponse(status=StatusCode.Error,message=message,data=data)
 
 def unavailable(message=None,data=None):
-   return message_response('Unavailable',message=message,data=data)
+   return StatusReponse(status=StatusCode.Unavailable,message=message,data=data)
 
-def version_info():
-   from littleflow import __version__ as lf_version
-   from littleflow_redis import __version__ as redis_version
-   info = {
-      'littleflow' : 'v' + '.'.join(map(str,lf_version)),
-      'littleflow_redis' : 'v' + '.'.join(map(str,redis_version)),
-   }
-   return info
+@service.route('/apispec.json')
+def apispec():
+   openapi = spec.to_dict()
+   return jsonify(openapi)
+
+@service.route('/apidocs/')
+def apidocs():
+   import littleflow_redis as source_module
+   with importlib.resources.as_file(importlib.resources.files(source_module).joinpath(f'service/elements.html')) as path:
+      with open(path,'r') as raw:
+         template = raw.read()
+   return render_template_string(template,url='/apispec.json')
 
 @service.route('/',methods=['GET'])
-@swag_from(defs)
 def index():
-   """Returns the service status
-   ---
-     consumes: []
-     produces:
-     - application/json
-     responses:
-        200:
-           description: The version information
-        default:
-           description: An error
-           schema:
-              $ref: '#/definitions/StatusResponse'
    """
-   return jsonify(version_info())
+   ---
+   get:
+      description: |-
+         Returns the service version information
+      responses:
+         200:
+            description: The version information
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/VersionInfo'
+   """
+   return jsonify(VersionInfo(littleflow=api_version[0],littleflow_redis=api_version[1]))
 
 @service.route('/workflows',methods=['GET'])
-@swag_from(defs)
 def workflows():
-   """Returns a list of currently cached workflows
+   """
    ---
-     consumes: []
-     produces:
-     - application/json
-     responses:
-        200:
-           description: The service status.
-           schema:
-              $ref: '#/definitions/WorkflowList'
-        default:
-           description: An error
-           schema:
-              $ref: '#/definitions/StatusResponse'
+   get:
+      description: |-
+         Returns a list all the cached workflows
+      responses:
+         200:
+            description: A list of workflow
+            content:
+               'application/json':
+                  schema:
+                     type: array
+                     items:
+                        type: string
    """
    client = get_redis()
    start = int(request.args.get('next',0))
@@ -157,22 +210,21 @@ def workflows():
    return response
 
 @service.route('/inprogress',methods=['GET'])
-@swag_from(defs)
 def inprogress():
-   """Returns a list of currently cached workflows
+   """
    ---
-     consumes: []
-     produces:
-     - application/json
-     responses:
-        200:
-           description: The service status.
-           schema:
-              $ref: '#/definitions/WorkflowList'
-        default:
-           description: An error
-           schema:
-              $ref: '#/definitions/StatusResponse'
+   get:
+      description: |-
+         Returns a list of currently cached workflows that are in progress
+      responses:
+         200:
+            description: A list of workflow ids
+            content:
+               'application/json':
+                  schema:
+                     type: array
+                     items:
+                        type: string
    """
    client = get_redis()
    items = client.smembers(current_app.config['INPROGRESS_KEY'])
@@ -183,6 +235,50 @@ def inprogress():
 def get_workflow(workflow_id):
    """Returns a workflow
    ---
+   get:
+      description: |-
+         Returns a specific workflow
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: A list of workflow ids
+            content:
+               'application/json':
+                  schema:
+                     type: object
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   delete:
+      description: |-
+         Deletes a workflow
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: A status response
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
    """
    client = get_redis()
    key = 'workflow:'+workflow_id
@@ -199,6 +295,31 @@ def get_workflow(workflow_id):
 
 @service.route('/workflows/<workflow_id>/terminate',methods=['POST'])
 def terminate(workflow_id):
+   """
+   ---
+   post:
+      description: |-
+         Terminates a running workflow
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: The workflow is terminating or terminated.
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    event_client = get_event_client()
    key = 'workflow:'+workflow_id
    if event_client.connection.exists(key)==0:
@@ -208,6 +329,30 @@ def terminate(workflow_id):
 
 @service.route('/workflows/terminate',methods=['POST'])
 def terminate_request():
+   """
+   ---
+   post:
+      description: |-
+         Terminates a running workflow
+      requestBody:
+         content:
+            "application/json":
+               schema:
+                  $ref: '#/components/schemas/WorkflowId'
+      responses:
+         200:
+            description: The workflow is terminating or terminated.
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    workflow_id = request.json.get('workflow')
    return terminate(workflow_id)
 
@@ -215,6 +360,28 @@ def terminate_request():
 def get_workflow_state(workflow_id):
    """Returns a workflow state
    ---
+   get:
+      description: |-
+         Returns the workflow state
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: The workflow state
+            content:
+               'application/json':
+                  schema:
+                     type: object
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
    """
    client = get_redis()
    key = 'workflow:'+workflow_id
@@ -239,6 +406,45 @@ def get_workflow_state(workflow_id):
 def get_workflow_trace(workflow_id,kind):
    """Returns a workflow trace
    ---
+   get:
+      description: |-
+         Returns the workflow trace
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+       - name: kind
+         in: path
+         schema:
+            type: string
+            enum:
+            - S
+            - A
+         description: The kind must be 'S' (state) or 'A' (activation)
+      responses:
+         200:
+            description: A trace array
+            content:
+               'application/json':
+                  schema:
+                     type: array
+                     items:
+                        type: array
+                        items: string
+         400:
+            description: A bad trace kind was specified
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
    """
    client = get_redis()
    key = 'workflow:'+workflow_id
@@ -253,6 +459,39 @@ def get_workflow_trace(workflow_id,kind):
 
 @service.route('/workflows/<workflow_id>/graph',methods=['GET'])
 def get_workflow_graph(workflow_id):
+   """
+   ---
+   get:
+      description: |-
+         Returns the workflow graphs as a mermaid diagram
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+       - name: orientation
+         in: query
+         schema:
+            type: string
+            enum:
+            - horizontal
+            - vertical
+         description: The graph orientation
+      responses:
+         200:
+            description: A trace array
+            content:
+               'text/plain':
+                  schema:
+                     type: string
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
@@ -267,6 +506,57 @@ def get_workflow_graph(workflow_id):
 
 @service.route('/workflows/<workflow_id>/archive',methods=['GET','POST'])
 def archive_workflow(workflow_id):
+   """
+   get:
+      description: |-
+         Returns the workflow archive representation of the current state
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: A workflow archive
+            content:
+               'application/json':
+                  schema:
+                     type: object
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   post:
+      description: |-
+         Stores the workflow archive representation of the current state into object storage
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      requestBody:
+         content:
+            "application/json":
+               schema:
+                  $ref: '#/components/schemas/ArchiveLocation'
+      responses:
+         200:
+            description: Indicates the achive was stored
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
@@ -306,6 +596,36 @@ def archive_workflow(workflow_id):
 
 @service.route('/workflows/<workflow_id>/restart',methods=['GET'])
 def service_restart_workflow(workflow_id):
+   """
+   get:
+      description: |-
+         Restarts a workflow
+      parameters:
+       - name: workflow_id
+         in: path
+         schema:
+            type: string
+         description: The workflow identifier assigned when the workflow instance was created
+      responses:
+         200:
+            description: Indicates success
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         400:
+            description: The workflow failed to restart
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         404:
+            description: The workflow does not exist
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    client = get_redis()
    key = 'workflow:'+workflow_id
    if client.exists(key)==0:
@@ -323,6 +643,51 @@ def service_restart_workflow(workflow_id):
 
 @service.route('/workflows/restore',methods=['GET','POST'])
 def restore_workflow_from_archive():
+   """
+   get:
+      description: |-
+         Restores a workflow from a URI
+      parameters:
+       - name: uri
+         in: query
+         schema:
+            type: string
+         description: The object storage URI
+      responses:
+         200:
+            description: The workflow was restored
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         400:
+            description: The workflow could not be restored
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   post:
+      description: |-
+         Restores a workflow from a URI
+      requestBody:
+         content:
+            "application/json":
+               schema:
+                  $ref: '#/components/schemas/Location'
+      responses:
+         200:
+            description: The workflow was restored
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         400:
+            description: The workflow could not be restored
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """   
    if request.method=='GET':
       workflow_id = request.args.get('workflow')
       uri = request.args.get('uri')
@@ -373,6 +738,34 @@ def restore_workflow_from_archive():
 
 @service.route('/workflows/start',methods=['POST'])
 def start_workflow_post():
+   """
+   post:
+      description: |-
+         Starts a new workflow
+      requestBody:
+         content:
+            "application/json":
+               description: A littleflow workflow and input
+               schema:
+                  $ref: '#/components/schemas/WorkflowStart'
+            "text/plain":
+               description: A littleflow workflow
+               schema:
+                  type: string
+      responses:
+         200:
+            description: The workflow was started
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         400:
+            description: The workflow could not be started
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
    if request.mimetype=='application/json':
       data = request.json
       workflow = data.get('workflow')
@@ -393,10 +786,43 @@ def start_workflow_post():
 
 @service.route('/workflows/start/upload',methods=['POST'])
 def start_workflow_upload():
-   if 'workflow' not in request.files:
+   """
+   post:
+      description: |-
+         Starts a new workflow from a form post where `input` is a text field
+         that is expected to be a JSON object and `workflow` is a file
+         attachment or form text field.
+      requestBody:
+         content:
+            "application/json":
+               description: A littleflow workflow and input
+               schema:
+                  $ref: '#/components/schemas/WorkflowStart'
+            "text/plain":
+               description: A littleflow workflow
+               schema:
+                  type: string
+      responses:
+         200:
+            description: The workflow was started
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+         400:
+            description: The workflow could not be started
+            content:
+               'application/json':
+                  schema:
+                     $ref: '#/components/schemas/StatusResponse'
+   """
+   if 'workflow' in request.files:
+      file = request.files['workflow']
+      workflow = file.read().decode('UTF-8')
+   elif 'workflow' in request.form:
+      workflow = request.form.get('workflow')
+   else:
       return error('The workflow was not attached.'), 400
-   file = request.files['workflow']
-   workflow = file.read().decode('UTF-8')
    input = request.form.get('input')
    if input is not None:
       input = json.loads(input)
@@ -407,3 +833,12 @@ def start_workflow_upload():
       return success(f'Workflow restored as {workflow_id}',{'workflow':workflow_id})
    except Exception as ex:
       return error(f'Cannot compile workflow due to: {ex}'), 400
+
+
+with service.test_request_context():
+   for name, view in service.view_functions.items():
+      try:
+         spec.path(view=view)
+      except Exception as ex:
+         logging.exception(ex)
+         logging.error(f'Cannot load view function {name}')
