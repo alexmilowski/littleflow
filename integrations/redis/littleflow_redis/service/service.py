@@ -832,6 +832,8 @@ def start_workflow_upload():
       _, _, workflow_id = workflow_id.partition(':')
       return jsonify(success(f'Workflow restored as {workflow_id}',workflow=workflow_id))
    except Exception as ex:
+      logging.exception(ex)
+      logging.error(f'Cannot run workflow due to: {ex}')
       return jsonify(error(f'Cannot compile workflow due to: {ex}')), 400
 
 
