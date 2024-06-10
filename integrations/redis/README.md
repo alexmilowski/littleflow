@@ -126,6 +126,34 @@ This user-interface shows you the workflow graph, color-coded for state, with th
 start and end times of various tasks (in diagram or in tabular format). You can
 start, stop, archive, and restore workflows as well as other tasks.
 
+### The API
+
+The api is accessible at the endpoint provided when you ran the service. By default, the endpoint binds at `0.0.0.0:5000` and
+can be run by:
+
+```
+python -m littleflow_redis.service
+```
+
+With this invocation, the API documentation is available at `http://127.0.0.1:5000/apidocs/` and OpenAPI specification is at `http://127.0.0.1:5000/apispec.json`.
+
+For example, the list of workflows can be retrieved at:
+
+```
+curl http://127.0.0.1:5000/workflows/
+```
+
+And a workflow can be started with:
+
+```
+curl --request POST \
+  --url http://127.0.0.1:5000/workflows/start \
+  --header 'Accept: application/json' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "workflow": "A → B"
+}'
+```
 
 ## What is a task worker?
 
