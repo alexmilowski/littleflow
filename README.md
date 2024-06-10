@@ -103,7 +103,7 @@ while not context.ending.empty():
 
 There is a [language specification](littleflow.md) for the workflow expressions.
 
-Also, the [Redis](integrations/redis) and [Kubernetes](integrations/k8s) integrations
+Also, the [Redis](integrations/redis) integration
 provide the ability to execute workflows in distributed context for remote
 execution of tasks and for long-running workflows. Further, the whole system can
 be [deployed on Kubernetes](deployment/).
