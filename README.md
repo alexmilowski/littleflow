@@ -137,8 +137,6 @@ There is also:
 
  * A [Redis integration](integrations/redis) for caching workflow state information and
    workflow events to enable distrubuted execution
- * A [Kubernetes integration](integrations/k8s) that builds on the Redis integration to
-   provide a way to execute tasks as [Kubernetes jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/).
  * A [Kubernetes deployment](deployment) that provides a way to deploy the framework on your Kubernetes cluster via [kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
 
 
